@@ -15,7 +15,7 @@ const supabase = createClient(
 
 export async function fetchTopPosts(): Promise<TopPost[]> {
   const { data, error } = await supabase
-    .from<TopPost>('latest_snapshots')
+    .from('latest_snapshots')
     .select('video_id,username,url,views,post_caption')
     .order('views', { ascending: false })
     .limit(10);
