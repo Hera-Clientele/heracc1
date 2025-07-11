@@ -58,7 +58,10 @@ export default function Page() {
     <main className="min-h-screen bg-gradient-to-br from-[#18181b] to-[#23272f] flex flex-col items-center py-12 font-sans">
       <div className="w-full max-w-4xl">
         <header className="mb-8 flex flex-col items-center">
-          <h1 className="text-4xl font-extrabold text-white tracking-tight mb-2 drop-shadow">TikTok Dashboard</h1>
+          <h1 className="text-4xl font-extrabold text-white tracking-tight mb-2 drop-shadow flex items-center gap-3">
+            <img src="/tiktok-1.svg" alt="TikTok Logo" className="h-10 w-10" />
+            TikTok Dashboard
+          </h1>
           <p className="text-slate-400 text-lg">Your daily TikTok performance at a glance</p>
         </header>
         <section className="mb-10">

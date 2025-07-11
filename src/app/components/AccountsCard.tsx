@@ -10,8 +10,10 @@ export default function AccountsCard({ accounts }: { accounts: AccountWithViews[
           <thead>
             <tr className="text-slate-300 text-sm uppercase">
               <th className="px-4 py-2 text-left">Username</th>
-              <th className="px-4 py-2 text-center">Total Views</th>
+              <th className="px-4 py-2 text-center">Followers</th>
               <th className="px-4 py-2 text-center">Posts</th>
+              <th className="px-4 py-2 text-center">Avg Views</th>
+              <th className="px-4 py-2 text-center">Total Views</th>
             </tr>
           </thead>
           <tbody>
@@ -20,8 +22,10 @@ export default function AccountsCard({ accounts }: { accounts: AccountWithViews[
                 <td className="px-4 py-2 font-mono">
                   <a href={account.profile_url} target="_blank" rel="noopener noreferrer" className="text-blue-400 underline hover:text-blue-300">{account.username}</a>
                 </td>
-                <td className="px-4 py-2 text-center">{account.total_views.toLocaleString()}</td>
+                <td className="px-4 py-2 text-center">{account.followers.toLocaleString()}</td>
                 <td className="px-4 py-2 text-center">{account.post_count}</td>
+                <td className="px-4 py-2 text-center">{account.average_views.toLocaleString()}</td>
+                <td className="px-4 py-2 text-center">{account.total_views.toLocaleString()}</td>
               </tr>
             ))}
           </tbody>

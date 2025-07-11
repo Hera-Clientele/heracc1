@@ -8,6 +8,7 @@ import {
   Tooltip,
   ResponsiveContainer,
   CartesianGrid,
+  Area,
 } from "recharts";
 
 interface Row {
@@ -64,10 +65,22 @@ export default function ViewsChart({ data }: { data: Row[] }) {
     <div>
       <ResponsiveContainer width="100%" height={300}>
         <LineChart data={cumulativeData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+          <defs>
+            <linearGradient id="colorViews" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.5}/>
+              <stop offset="100%" stopColor="#3b82f6" stopOpacity={0.15}/>
+            </linearGradient>
+          </defs>
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis dataKey="day" tick={{ fontSize: 12 }} />
-          <YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
+          <YAxis tick={{ fontSize: 12 }} allowDecimals={false} domain={[0, 'auto']} />
           <Tooltip content={<CustomTooltip />} />
+          <Area
+            type="linear"
+            dataKey="views"
+            stroke="none"
+            fill="#ff0000"
+          />
           <Line
             type="linear"
             dataKey="views"
