@@ -62,7 +62,7 @@ export default function Page() {
           <p className="text-slate-400 text-lg">Your daily TikTok performance at a glance</p>
         </header>
         <section className="mb-10">
-          {loading ? <div className="text-slate-300 py-8 text-center">Loading...</div> : error ? <div className="text-red-400 py-8 text-center">{error}</div> : <StatsGrid data={data} />}
+          {loading ? <div className="text-slate-300 py-8 text-center">Loading...</div> : error ? <div className="text-red-400 py-8 text-center">{error}</div> : <StatsGrid data={data} uniqueAccounts={accounts.length} />}
         </section>
         <section className="backdrop-blur-md bg-white/5 border border-white/10 rounded-2xl shadow-xl p-6">
           <h2 className="text-xl font-semibold text-white mb-4">Total Views Over Time</h2>

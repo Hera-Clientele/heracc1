@@ -60,6 +60,7 @@ export default function TopPostsCard() {
                 <th className="px-4 py-2 text-left">Username</th>
                 <th className="px-4 py-2 text-left">Post Caption</th>
                 <th className="px-4 py-2 text-center">Total Views</th>
+                <th className="px-4 py-2 text-center">Post Date</th>
               </tr>
             </thead>
             <tbody>
@@ -74,6 +75,9 @@ export default function TopPostsCard() {
                     </a>
                   </td>
                   <td className="px-4 py-2 text-center">{post.views.toLocaleString()}</td>
+                  <td className="px-4 py-2 text-center">
+                    {post.created_at ? new Date(post.created_at).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }) : ''}
+                  </td>
                 </tr>
               ))}
             </tbody>

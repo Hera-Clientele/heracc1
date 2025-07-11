@@ -8,6 +8,7 @@ export async function GET(req: NextRequest) {
     const posts = await fetchTopPosts(period);
     return Response.json({ posts });
   } catch (error: any) {
+    console.error('TopPosts API error:', error); // Log the error for debugging
     return Response.json({ error: error.message }, { status: 500 });
   }
 } 

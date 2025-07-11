@@ -13,13 +13,14 @@ interface Row {
 
 interface StatsGridProps {
   data: Row[];
+  uniqueAccounts?: number;
 }
 
 function sum(arr: number[]) {
   return arr.reduce((a, b) => a + b, 0);
 }
 
-export default function StatsGrid({ data }: StatsGridProps) {
+export default function StatsGrid({ data, uniqueAccounts }: StatsGridProps) {
   const totals = {
     views: sum(data.map((r) => r.views)),
     likes: sum(data.map((r) => r.likes)),
@@ -31,7 +32,7 @@ export default function StatsGrid({ data }: StatsGridProps) {
   const engagement = totals.views === 0 ? 0 : ((totals.likes + totals.comments + totals.shares) / totals.views) * 100;
 
   const cards = [
-    { label: 'Total Accounts', value: totals.accounts.toLocaleString() },
+    { label: 'Total Accounts', value: (uniqueAccounts !== undefined ? uniqueAccounts : totals.accounts).toLocaleString() },
     { label: 'Total Posts', value: totals.posts.toLocaleString() },
     { label: 'Total Views', value: totals.views.toLocaleString() },
     { label: 'Engagement %', value: engagement.toFixed(2) },
