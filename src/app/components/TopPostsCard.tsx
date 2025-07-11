@@ -21,7 +21,7 @@ export default function TopPostsCard() {
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch(`/api/top-posts?period=${period}`);
+        const res = await fetch(`/api/top-posts?period=${period}`, { cache: 'no-store' });
         if (!res.ok) throw new Error('Failed to fetch');
         const data = await res.json();
         setPosts(data.posts);
