@@ -1,95 +1,32 @@
-import Image from "next/image";
-import styles from "./page.module.css";
+import StatsGrid from './components/StatsGrid';
+import ViewsChart from './components/ViewsChart';
+import { fetchDailyAgg } from './lib/fetchDailyAgg';
+import { fetchTopPosts } from './lib/fetchTopPosts';
+import TopPostsCard from './components/TopPostsCard';
+import { fetchAccountsWithViews } from './lib/fetchAccountsWithViews';
+import AccountsCard from './components/AccountsCard';
 
-export default function Home() {
+export default async function Page() {
+  const data = await fetchDailyAgg();
+  const topPosts = await fetchTopPosts();
+  const accounts = await fetchAccountsWithViews();
   return (
-    <div className={styles.page}>
-      <main className={styles.main}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol>
-          <li>
-            Get started by editing <code>src/app/page.tsx</code>.
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
-
-        <div className={styles.ctas}>
-          <a
-            className={styles.primary}
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className={styles.logo}
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-            className={styles.secondary}
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className={styles.footer}>
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+    <main className="min-h-screen bg-gradient-to-br from-[#18181b] to-[#23272f] flex flex-col items-center py-12 font-sans">
+      <div className="w-full max-w-4xl">
+        <header className="mb-8 flex flex-col items-center">
+          <h1 className="text-4xl font-extrabold text-white tracking-tight mb-2 drop-shadow">TikTok Dashboard</h1>
+          <p className="text-slate-400 text-lg">Your daily TikTok performance at a glance</p>
+        </header>
+        <section className="mb-10">
+          <StatsGrid data={data} />
+        </section>
+        <section className="backdrop-blur-md bg-white/5 border border-white/10 rounded-2xl shadow-xl p-6">
+          <h2 className="text-xl font-semibold text-white mb-4">Total Views Over Time</h2>
+          <ViewsChart data={data} />
+        </section>
+        <TopPostsCard posts={topPosts} />
+        <AccountsCard accounts={accounts} />
+      </div>
+    </main>
   );
 }
