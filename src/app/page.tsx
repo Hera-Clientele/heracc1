@@ -24,7 +24,7 @@ export default async function Page() {
           <h2 className="text-xl font-semibold text-white mb-4">Total Views Over Time</h2>
           <ViewsChart data={data} />
         </section>
-        <TopPostsCard posts={topPosts} />
+        <TopPostsCard/>
         <AccountsCard accounts={accounts} />
       </div>
     </main>
