@@ -18,7 +18,7 @@ const supabase = createClient(
 
 export async function fetchDailyAgg(): Promise<Row[]> {
   const { data, error } = await supabase
-    .from<Row>('daily_agg')
+    .from('daily_agg')
     .select('*')
     .order('day', { ascending: true });
   if (error) throw error;
