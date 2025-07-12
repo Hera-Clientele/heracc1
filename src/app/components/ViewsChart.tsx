@@ -10,6 +10,7 @@ import {
   CartesianGrid,
   Area,
 } from "recharts";
+import dayjs from "dayjs";
 
 interface Row {
   day: string;
@@ -44,17 +45,41 @@ export default function ViewsChart({ data }: { data: Row[] }) {
     return acc;
   }, []);
 
+  // Compute daily views gained per day
+  const dailyGains = dataWithInitial.map((row, idx) => {
+    if (idx === 0) return { day: row.day, gain: 0 };
+    return {
+      day: row.day,
+      gain: row.views,
+    };
+  });
+
   // Custom Tooltip
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
-      const idx = cumulativeData.findIndex((row) => row.day === label);
-      const dailyGain = dataWithInitial[idx]?.views ?? 0;
+      // const idx = cumulativeData.findIndex((row) => row.day === label);
+      // const dailyGain = dataWithInitial[idx]?.views ?? 0;
       const totalViews = payload[0].value;
       return (
         <div className="bg-slate-900/90 p-3 rounded-lg shadow text-white border border-slate-700">
-          <div className="font-semibold mb-1">{label}</div>
-          <div>Gain: <span className="text-blue-400 font-bold">{dailyGain}</span></div>
+          <div className="font-semibold mb-1">{dayjs(label).format("MMMM D")}</div>
+          {/* <div>Gain: <span className="text-blue-400 font-bold">{dailyGain}</span></div> */}
           <div>Total Views: <span className="text-blue-400 font-bold">{totalViews}</span></div>
+        </div>
+      );
+    }
+    return null;
+  };
+
+  // Custom Tooltip for Daily Gains
+  const DailyGainTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      const gain = payload[0].value;
+      if (gain === 0 && label === initialDate) return null;
+      return (
+        <div className="bg-slate-900/90 p-3 rounded-lg shadow text-white border border-slate-700">
+          <div className="font-semibold mb-1">{dayjs(label).format("MMMM D")}</div>
+          <div>Daily Gain: <span className="text-orange-400 font-bold">{gain}</span></div>
         </div>
       );
     }
@@ -72,8 +97,12 @@ export default function ViewsChart({ data }: { data: Row[] }) {
             </linearGradient>
           </defs>
           <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="day" tick={{ fontSize: 12 }} />
-          <YAxis tick={{ fontSize: 12 }} allowDecimals={false} domain={[0, 'auto']} />
+          <XAxis
+            dataKey="day"
+            tick={{ fontSize: 12 }}
+            tickFormatter={(date) => date === initialDate ? "" : dayjs(date).format("MMMM D")}
+          />
+          <YAxis tick={{ fontSize: 12 }} allowDecimals={false} domain={[0, 'auto']} tickFormatter={tick => tick === 0 ? '' : tick} />
           <Tooltip content={<CustomTooltip />} />
           <Area
             type="linear"
@@ -91,6 +120,42 @@ export default function ViewsChart({ data }: { data: Row[] }) {
           />
         </LineChart>
       </ResponsiveContainer>
+      {/* New chart for daily views gained */}
+      <div className="mt-8">
+        <div className="font-semibold text-lg mb-2 text-white">Daily Views Gained</div>
+        <ResponsiveContainer width="100%" height={200}>
+          <LineChart data={dailyGains} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+            <defs>
+              <linearGradient id="colorGain" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#f59e42" stopOpacity={0.5}/>
+                <stop offset="100%" stopColor="#f59e42" stopOpacity={0.15}/>
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis
+              dataKey="day"
+              tick={{ fontSize: 12 }}
+              tickFormatter={(date) => date === initialDate ? "" : dayjs(date).format("MMMM D")}
+            />
+            <YAxis tick={{ fontSize: 12 }} allowDecimals={false} domain={[0, 'auto']} tickFormatter={tick => tick === 0 ? '' : tick} />
+            <Tooltip content={<DailyGainTooltip />} />
+            <Area
+              type="linear"
+              dataKey="gain"
+              stroke="none"
+              fill="url(#colorGain)"
+            />
+            <Line
+              type="linear"
+              dataKey="gain"
+              stroke="#f59e42"
+              strokeWidth={2}
+              dot={{ r: 3 }}
+              activeDot={{ r: 5 }}
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
     </div>
   );
 } 
