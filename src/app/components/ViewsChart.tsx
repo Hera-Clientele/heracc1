@@ -86,6 +86,21 @@ export default function ViewsChart({ data }: { data: Row[] }) {
     return null;
   };
 
+  // Custom Tooltip for Posts
+  const PostsTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      const posts = payload[0].value;
+      if (posts === 0 && label === initialDate) return null;
+      return (
+        <div className="bg-slate-900/90 p-3 rounded-lg shadow text-white border border-slate-700">
+          <div className="font-semibold mb-1">{dayjs(label).format("MMMM D")}</div>
+          <div>Posts: <span className="text-green-400 font-bold">{posts}</span></div>
+        </div>
+      );
+    }
+    return null;
+  };
+
   return (
     <div>
       <ResponsiveContainer width="100%" height={300}>
@@ -149,6 +164,42 @@ export default function ViewsChart({ data }: { data: Row[] }) {
               type="linear"
               dataKey="gain"
               stroke="#f59e42"
+              strokeWidth={2}
+              dot={{ r: 3 }}
+              activeDot={{ r: 5 }}
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+      {/* New chart for daily posts */}
+      <div className="mt-8">
+        <div className="font-semibold text-lg mb-2 text-white">Daily Posts</div>
+        <ResponsiveContainer width="100%" height={200}>
+          <LineChart data={dataWithInitial} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+            <defs>
+              <linearGradient id="colorPosts" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#10b981" stopOpacity={0.5}/>
+                <stop offset="100%" stopColor="#10b981" stopOpacity={0.15}/>
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis
+              dataKey="day"
+              tick={{ fontSize: 12 }}
+              tickFormatter={(date) => date === initialDate ? "" : dayjs(date).format("MMMM D")}
+            />
+            <YAxis tick={{ fontSize: 12 }} allowDecimals={false} domain={[0, 'auto']} tickFormatter={tick => tick === 0 ? '' : tick} />
+            <Tooltip content={<PostsTooltip />} />
+            <Area
+              type="linear"
+              dataKey="posts"
+              stroke="none"
+              fill="url(#colorPosts)"
+            />
+            <Line
+              type="linear"
+              dataKey="posts"
+              stroke="#10b981"
               strokeWidth={2}
               dot={{ r: 3 }}
               activeDot={{ r: 5 }}
