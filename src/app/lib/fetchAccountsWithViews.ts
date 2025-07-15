@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 export interface AccountWithViews {
   username: string;
   profile_url: string;
-  total_views: number;
+  highest_view_post: number;
   post_count: number;
   average_views: number;
   followers: number;
@@ -20,8 +20,8 @@ export async function fetchAccountsWithViews(): Promise<AccountWithViews[]> {
     .select('username, profile_url, views, video_id, followers')
     .order('username', { ascending: true });
   if (error) throw error;
-  // Aggregate views, post count, and followers by username/profile_url
-  const accountMap: Record<string, { username: string; profile_url: string; total_views: number; videoIds: Set<string>; followers: number }> = {};
+  // Aggregate highest view post, post count, and followers by username/profile_url
+  const accountMap: Record<string, { username: string; profile_url: string; highest_view_post: number; videoIds: Set<string>; followers: number }> = {};
   for (const row of data || []) {
     if (!row.username || !row.profile_url) continue;
     const key = row.username + '|' + row.profile_url;
@@ -29,12 +29,14 @@ export async function fetchAccountsWithViews(): Promise<AccountWithViews[]> {
       accountMap[key] = {
         username: row.username,
         profile_url: row.profile_url,
-        total_views: 0,
+        highest_view_post: 0,
         videoIds: new Set(),
         followers: 0,
       };
     }
-    accountMap[key].total_views += row.views || 0;
+    if (row.views && row.views > accountMap[key].highest_view_post) {
+      accountMap[key].highest_view_post = row.views;
+    }
     if (row.video_id) accountMap[key].videoIds.add(row.video_id.toString());
     if (row.followers && row.followers > accountMap[key].followers) {
       accountMap[key].followers = row.followers;
@@ -46,11 +48,11 @@ export async function fetchAccountsWithViews(): Promise<AccountWithViews[]> {
       return {
         username: acc.username,
         profile_url: acc.profile_url,
-        total_views: acc.total_views,
+        highest_view_post: acc.highest_view_post,
         post_count,
-        average_views: post_count > 0 ? Math.floor(acc.total_views / post_count) : 0,
+        average_views: post_count > 0 ? Math.floor(acc.highest_view_post / post_count) : 0, // You may want to update this logic if needed
         followers: acc.followers,
       };
     })
-    .sort((a, b) => b.total_views - a.total_views);
+    .sort((a, b) => b.highest_view_post - a.highest_view_post);
 } 
