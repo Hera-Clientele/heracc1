@@ -16,104 +16,40 @@ const supabase = createClient(
 );
 
 function getDateRange(period: 'today' | '3days' | '7days' | 'month' | 'all') {
-  // Use UTC to avoid timezone issues in production
   const now = new Date();
-  const utcNow = new Date(now.getTime() + now.getTimezoneOffset() * 60000);
   let from: Date | null = null;
   let to: Date | null = null;
-  
   if (period === 'today') {
-    // Start of today in UTC
-    from = new Date(Date.UTC(utcNow.getUTCFullYear(), utcNow.getUTCMonth(), utcNow.getUTCDate()));
-    // Start of tomorrow in UTC
-    to = new Date(Date.UTC(utcNow.getUTCFullYear(), utcNow.getUTCMonth(), utcNow.getUTCDate() + 1));
+    from = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    to = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
   } else if (period === '3days') {
-    // 3 days ago from today
-    from = new Date(Date.UTC(utcNow.getUTCFullYear(), utcNow.getUTCMonth(), utcNow.getUTCDate() - 2));
+    from = new Date(now);
+    from.setDate(now.getDate() - 2);
+    from.setHours(0, 0, 0, 0);
   } else if (period === '7days') {
-    // 7 days ago from today
-    from = new Date(Date.UTC(utcNow.getUTCFullYear(), utcNow.getUTCMonth(), utcNow.getUTCDate() - 6));
+    from = new Date(now);
+    from.setDate(now.getDate() - 6);
+    from.setHours(0, 0, 0, 0);
   } else if (period === 'month') {
-    // Start of current month
-    from = new Date(Date.UTC(utcNow.getUTCFullYear(), utcNow.getUTCMonth(), 1));
+    from = new Date(now.getFullYear(), now.getMonth(), 1);
   }
-  
   return { from: from ? from.toISOString() : null, to: to ? to.toISOString() : null };
 }
 
 export async function fetchTopPosts(period: 'today' | '3days' | '7days' | 'month' | 'all' = 'all'): Promise<TopPost[]> {
   const { from, to } = getDateRange(period);
 
-  // Debug logging
-  console.log(`fetchTopPosts - Period: ${period}`);
-  console.log(`fetchTopPosts - From: ${from}`);
-  console.log(`fetchTopPosts - To: ${to}`);
+  let params: any = { period_start: from, limit_count: 10 };
+  if (to) params.period_end = to;
 
-  let query = supabase
-    .from('latest_snapshots')
-    .select('video_id, username, url, views, post_caption, snapshot_date, created_at')
-    .not('views', 'is', null)
-    .gt('views', 0)
-    .order('views', { ascending: false })
-    .limit(10);
-
-  // Apply date filtering using created_at
-  if (period !== 'all') {
-    if (from) {
-      query = query.gte('created_at', from);
-    }
-    if (to) {
-      query = query.lt('created_at', to);
-    }
+  // For 'all', just use a very early start date
+  if (period === 'all') {
+    params.period_start = '1970-01-01T00:00:00Z';
+    params.period_end = null;
   }
 
-  const { data, error } = await query;
+  const { data, error } = await supabase.rpc('get_top_posts', params);
 
   if (error) throw error;
-  
-  // Debug logging
-  console.log(`fetchTopPosts - Results count: ${data?.length || 0}`);
-  if (data && data.length > 0) {
-    console.log(`fetchTopPosts - First result created_at: ${data[0].created_at}`);
-  }
-  
-  // If no results for "today", try without date filtering as fallback
-  if (period === 'today' && (!data || data.length === 0)) {
-    console.log('fetchTopPosts - No results for today, trying fallback query...');
-    const fallbackQuery = supabase
-      .from('latest_snapshots')
-      .select('video_id, username, url, views, post_caption, snapshot_date, created_at')
-      .not('views', 'is', null)
-      .gt('views', 0)
-      .order('views', { ascending: false })
-      .limit(10);
-    
-    const { data: fallbackData, error: fallbackError } = await fallbackQuery;
-    if (fallbackError) throw fallbackError;
-    
-    console.log(`fetchTopPosts - Fallback results count: ${fallbackData?.length || 0}`);
-    if (fallbackData && fallbackData.length > 0) {
-      console.log(`fetchTopPosts - Fallback first result created_at: ${fallbackData[0].created_at}`);
-    }
-    
-    return (fallbackData || []).map(row => ({
-      video_id: row.video_id,
-      username: row.username || 'Unknown',
-      url: row.url || '#',
-      views: row.views || 0,
-      post_caption: row.post_caption || 'No caption',
-      snapshot_date: row.snapshot_date,
-      created_at: row.created_at,
-    }));
-  }
-  
-  return (data || []).map(row => ({
-    video_id: row.video_id,
-    username: row.username || 'Unknown',
-    url: row.url || '#',
-    views: row.views || 0,
-    post_caption: row.post_caption || 'No caption',
-    snapshot_date: row.snapshot_date,
-    created_at: row.created_at,
-  }));
+  return data || [];
 } 
