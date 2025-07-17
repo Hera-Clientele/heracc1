@@ -39,17 +39,35 @@ function getDateRange(period: 'today' | '3days' | '7days' | 'month' | 'all') {
 export async function fetchTopPosts(period: 'today' | '3days' | '7days' | 'month' | 'all' = 'all'): Promise<TopPost[]> {
   const { from, to } = getDateRange(period);
 
-  let params: any = { period_start: from, limit_count: 10 };
-  if (to) params.period_end = to;
+  let query = supabase
+    .from('latest_snapshots')
+    .select('video_id, username, url, views, post_caption, snapshot_date, created_at')
+    .not('views', 'is', null)
+    .gt('views', 0)
+    .order('views', { ascending: false })
+    .limit(10);
 
-  // For 'all', just use a very early start date
-  if (period === 'all') {
-    params.period_start = '1970-01-01T00:00:00Z';
-    params.period_end = null;
+  // Apply date filtering using created_at
+  if (period !== 'all') {
+    if (from) {
+      query = query.gte('created_at', from);
+    }
+    if (to) {
+      query = query.lt('created_at', to);
+    }
   }
 
-  const { data, error } = await supabase.rpc('get_top_posts', params);
+  const { data, error } = await query;
 
   if (error) throw error;
-  return data || [];
+  
+  return (data || []).map(row => ({
+    video_id: row.video_id,
+    username: row.username || 'Unknown',
+    url: row.url || '#',
+    views: row.views || 0,
+    post_caption: row.post_caption || 'No caption',
+    snapshot_date: row.snapshot_date,
+    created_at: row.created_at,
+  }));
 } 
