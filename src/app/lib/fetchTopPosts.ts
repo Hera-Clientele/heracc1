@@ -44,6 +44,11 @@ function getDateRange(period: 'today' | '3days' | '7days' | 'month' | 'all') {
 export async function fetchTopPosts(period: 'today' | '3days' | '7days' | 'month' | 'all' = 'all'): Promise<TopPost[]> {
   const { from, to } = getDateRange(period);
 
+  // Debug logging
+  console.log(`fetchTopPosts - Period: ${period}`);
+  console.log(`fetchTopPosts - From: ${from}`);
+  console.log(`fetchTopPosts - To: ${to}`);
+
   let query = supabase
     .from('latest_snapshots')
     .select('video_id, username, url, views, post_caption, snapshot_date, created_at')
@@ -65,6 +70,42 @@ export async function fetchTopPosts(period: 'today' | '3days' | '7days' | 'month
   const { data, error } = await query;
 
   if (error) throw error;
+  
+  // Debug logging
+  console.log(`fetchTopPosts - Results count: ${data?.length || 0}`);
+  if (data && data.length > 0) {
+    console.log(`fetchTopPosts - First result created_at: ${data[0].created_at}`);
+  }
+  
+  // If no results for "today", try without date filtering as fallback
+  if (period === 'today' && (!data || data.length === 0)) {
+    console.log('fetchTopPosts - No results for today, trying fallback query...');
+    const fallbackQuery = supabase
+      .from('latest_snapshots')
+      .select('video_id, username, url, views, post_caption, snapshot_date, created_at')
+      .not('views', 'is', null)
+      .gt('views', 0)
+      .order('created_at', { ascending: false })
+      .limit(10);
+    
+    const { data: fallbackData, error: fallbackError } = await fallbackQuery;
+    if (fallbackError) throw fallbackError;
+    
+    console.log(`fetchTopPosts - Fallback results count: ${fallbackData?.length || 0}`);
+    if (fallbackData && fallbackData.length > 0) {
+      console.log(`fetchTopPosts - Fallback first result created_at: ${fallbackData[0].created_at}`);
+    }
+    
+    return (fallbackData || []).map(row => ({
+      video_id: row.video_id,
+      username: row.username || 'Unknown',
+      url: row.url || '#',
+      views: row.views || 0,
+      post_caption: row.post_caption || 'No caption',
+      snapshot_date: row.snapshot_date,
+      created_at: row.created_at,
+    }));
+  }
   
   return (data || []).map(row => ({
     video_id: row.video_id,
