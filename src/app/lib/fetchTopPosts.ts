@@ -16,23 +16,28 @@ const supabase = createClient(
 );
 
 function getDateRange(period: 'today' | '3days' | '7days' | 'month' | 'all') {
+  // Use UTC to avoid timezone issues in production
   const now = new Date();
+  const utcNow = new Date(now.getTime() + now.getTimezoneOffset() * 60000);
   let from: Date | null = null;
   let to: Date | null = null;
+  
   if (period === 'today') {
-    from = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    to = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+    // Start of today in UTC
+    from = new Date(Date.UTC(utcNow.getUTCFullYear(), utcNow.getUTCMonth(), utcNow.getUTCDate()));
+    // Start of tomorrow in UTC
+    to = new Date(Date.UTC(utcNow.getUTCFullYear(), utcNow.getUTCMonth(), utcNow.getUTCDate() + 1));
   } else if (period === '3days') {
-    from = new Date(now);
-    from.setDate(now.getDate() - 2);
-    from.setHours(0, 0, 0, 0);
+    // 3 days ago from today
+    from = new Date(Date.UTC(utcNow.getUTCFullYear(), utcNow.getUTCMonth(), utcNow.getUTCDate() - 2));
   } else if (period === '7days') {
-    from = new Date(now);
-    from.setDate(now.getDate() - 6);
-    from.setHours(0, 0, 0, 0);
+    // 7 days ago from today
+    from = new Date(Date.UTC(utcNow.getUTCFullYear(), utcNow.getUTCMonth(), utcNow.getUTCDate() - 6));
   } else if (period === 'month') {
-    from = new Date(now.getFullYear(), now.getMonth(), 1);
+    // Start of current month
+    from = new Date(Date.UTC(utcNow.getUTCFullYear(), utcNow.getUTCMonth(), 1));
   }
+  
   return { from: from ? from.toISOString() : null, to: to ? to.toISOString() : null };
 }
 
