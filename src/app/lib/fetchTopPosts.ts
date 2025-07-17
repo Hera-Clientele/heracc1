@@ -85,7 +85,7 @@ export async function fetchTopPosts(period: 'today' | '3days' | '7days' | 'month
       .select('video_id, username, url, views, post_caption, snapshot_date, created_at')
       .not('views', 'is', null)
       .gt('views', 0)
-      .order('created_at', { ascending: false })
+      .order('views', { ascending: false })
       .limit(10);
     
     const { data: fallbackData, error: fallbackError } = await fallbackQuery;
