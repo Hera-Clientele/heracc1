@@ -1,7 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  env: {
+    TZ: 'America/New_York',
+  },
 };
 
 export default nextConfig;

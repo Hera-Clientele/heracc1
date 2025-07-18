@@ -19,10 +19,13 @@ function getDateRange(period: 'today' | 'yesterday' | '3days' | '7days' | 'month
   const now = new Date();
   let from: Date | null = null;
   let to: Date | null = null;
+  
   if (period === 'today') {
+    // Today in EST
     from = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     to = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
   } else if (period === 'yesterday') {
+    // Yesterday in EST
     from = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
     to = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   } else if (period === '3days') {

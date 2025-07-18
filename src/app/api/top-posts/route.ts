@@ -1,6 +1,9 @@
 import { NextRequest } from 'next/server';
 import { fetchTopPosts } from '../../lib/fetchTopPosts';
 
+// Set timezone to EST
+process.env.TZ = 'America/New_York';
+
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const period = searchParams.get('period') as 'today' | 'yesterday' | '3days' | '7days' | 'month' | 'all' || 'today';
