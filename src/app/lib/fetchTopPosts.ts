@@ -15,13 +15,16 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-function getDateRange(period: 'today' | '3days' | '7days' | 'month' | 'all') {
+function getDateRange(period: 'today' | 'yesterday' | '3days' | '7days' | 'month' | 'all') {
   const now = new Date();
   let from: Date | null = null;
   let to: Date | null = null;
   if (period === 'today') {
     from = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     to = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+  } else if (period === 'yesterday') {
+    from = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+    to = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   } else if (period === '3days') {
     from = new Date(now);
     from.setDate(now.getDate() - 2);
@@ -36,7 +39,7 @@ function getDateRange(period: 'today' | '3days' | '7days' | 'month' | 'all') {
   return { from: from ? from.toISOString() : null, to: to ? to.toISOString() : null };
 }
 
-export async function fetchTopPosts(period: 'today' | '3days' | '7days' | 'month' | 'all' = 'all'): Promise<TopPost[]> {
+export async function fetchTopPosts(period: 'today' | 'yesterday' | '3days' | '7days' | 'month' | 'all' = 'all'): Promise<TopPost[]> {
   const { from, to } = getDateRange(period);
 
   let params: any = { period_start: from, limit_count: 10 };

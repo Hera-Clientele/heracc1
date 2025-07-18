@@ -4,6 +4,7 @@ import type { TopPost } from '../lib/fetchTopPosts';
 
 const PERIODS = [
   { label: "Today's Top 10", value: 'today' },
+  { label: "Yesterday", value: 'yesterday' },
   { label: 'Past 3 Days', value: '3days' },
   { label: 'Past 7 Days', value: '7days' },
   { label: 'This Month', value: 'month' },
@@ -11,7 +12,7 @@ const PERIODS = [
 ];
 
 export default function TopPostsCard() {
-  const [period, setPeriod] = useState<'today' | '3days' | '7days' | 'month' | 'all'>('today');
+  const [period, setPeriod] = useState<'today' | 'yesterday' | '3days' | '7days' | 'month' | 'all'>('today');
   const [posts, setPosts] = useState<TopPost[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
