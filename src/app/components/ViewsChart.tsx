@@ -11,6 +11,11 @@ import {
   Area,
 } from "recharts";
 import dayjs from "dayjs";
+import utc from 'dayjs/plugin/utc';
+import timezone from 'dayjs/plugin/timezone';
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 interface Row {
   day: string;
@@ -62,7 +67,7 @@ export default function ViewsChart({ data }: { data: Row[] }) {
       const totalViews = payload[0].value;
       return (
         <div className="bg-slate-900/90 p-3 rounded-lg shadow text-white border border-slate-700">
-          <div className="font-semibold mb-1">{dayjs(label).format("MMMM D")}</div>
+          <div className="font-semibold mb-1">{dayjs(label).tz('America/New_York').format("MMMM D")}</div>
           {/* <div>Gain: <span className="text-blue-400 font-bold">{dailyGain}</span></div> */}
           <div>Total Views: <span className="text-blue-400 font-bold">{totalViews}</span></div>
         </div>
@@ -78,7 +83,7 @@ export default function ViewsChart({ data }: { data: Row[] }) {
       if (gain === 0 && label === initialDate) return null;
       return (
         <div className="bg-slate-900/90 p-3 rounded-lg shadow text-white border border-slate-700">
-          <div className="font-semibold mb-1">{dayjs(label).format("MMMM D")}</div>
+          <div className="font-semibold mb-1">{dayjs(label).tz('America/New_York').format("MMMM D")}</div>
           <div>Daily Gain: <span className="text-orange-400 font-bold">{gain}</span></div>
         </div>
       );
@@ -93,7 +98,7 @@ export default function ViewsChart({ data }: { data: Row[] }) {
       if (posts === 0 && label === initialDate) return null;
       return (
         <div className="bg-slate-900/90 p-3 rounded-lg shadow text-white border border-slate-700">
-          <div className="font-semibold mb-1">{dayjs(label).format("MMMM D")}</div>
+          <div className="font-semibold mb-1">{dayjs(label).tz('America/New_York').format("MMMM D")}</div>
           <div>Posts: <span className="text-green-400 font-bold">{posts}</span></div>
         </div>
       );
@@ -115,7 +120,7 @@ export default function ViewsChart({ data }: { data: Row[] }) {
           <XAxis
             dataKey="day"
             tick={{ fontSize: 12 }}
-            tickFormatter={(date) => date === initialDate ? "" : dayjs(date).format("MMMM D")}
+            tickFormatter={(date) => date === initialDate ? "" : dayjs(date).tz('America/New_York').format("MMMM D")}
           />
           <YAxis tick={{ fontSize: 12 }} allowDecimals={false} domain={[0, 'auto']} tickFormatter={tick => tick === 0 ? '' : tick} />
           <Tooltip content={<CustomTooltip />} />
@@ -150,7 +155,7 @@ export default function ViewsChart({ data }: { data: Row[] }) {
             <XAxis
               dataKey="day"
               tick={{ fontSize: 12 }}
-              tickFormatter={(date) => date === initialDate ? "" : dayjs(date).format("MMMM D")}
+              tickFormatter={(date) => date === initialDate ? "" : dayjs(date).tz('America/New_York').format("MMMM D")}
             />
             <YAxis tick={{ fontSize: 12 }} allowDecimals={false} domain={[0, 'auto']} tickFormatter={tick => tick === 0 ? '' : tick} />
             <Tooltip content={<DailyGainTooltip />} />
@@ -186,7 +191,7 @@ export default function ViewsChart({ data }: { data: Row[] }) {
             <XAxis
               dataKey="day"
               tick={{ fontSize: 12 }}
-              tickFormatter={(date) => date === initialDate ? "" : dayjs(date).format("MMMM D")}
+              tickFormatter={(date) => date === initialDate ? "" : dayjs(date).tz('America/New_York').format("MMMM D")}
             />
             <YAxis tick={{ fontSize: 12 }} allowDecimals={false} domain={[0, 'auto']} tickFormatter={tick => tick === 0 ? '' : tick} />
             <Tooltip content={<PostsTooltip />} />

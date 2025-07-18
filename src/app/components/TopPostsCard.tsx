@@ -1,6 +1,12 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 import type { TopPost } from '../lib/fetchTopPosts';
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+import timezone from 'dayjs/plugin/timezone';
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 const PERIODS = [
   { label: "Today's Top 10", value: 'today' },
@@ -77,7 +83,7 @@ export default function TopPostsCard() {
                   </td>
                   <td className="px-4 py-2 text-center">{post.views.toLocaleString()}</td>
                   <td className="px-4 py-2 text-center">
-                    {post.created_at ? new Date(post.created_at).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }) : ''}
+                    {post.created_at ? dayjs(post.created_at).tz('America/New_York').format('MM/DD/YYYY') : ''}
                   </td>
                 </tr>
               ))}
