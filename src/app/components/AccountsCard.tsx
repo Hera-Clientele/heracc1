@@ -2,6 +2,8 @@ import React from 'react';
 import type { AccountWithViews } from '../lib/fetchAccountsWithViews';
 
 export default function AccountsCard({ accounts }: { accounts: AccountWithViews[] }) {
+  // Sort accounts by average_views descending
+  const sortedAccounts = [...accounts].sort((a, b) => b.average_views - a.average_views);
   return (
     <div className="backdrop-blur-md bg-white/5 border border-white/10 rounded-2xl shadow-xl p-6 mt-8">
       <h2 className="text-xl font-semibold text-white mb-4">TikTok Accounts</h2>
@@ -17,7 +19,7 @@ export default function AccountsCard({ accounts }: { accounts: AccountWithViews[
             </tr>
           </thead>
           <tbody>
-            {accounts.map((account) => (
+            {sortedAccounts.map((account) => (
               <tr key={account.username + account.profile_url} className="hover:bg-slate-800/40 transition">
                 <td className="px-4 py-2 font-mono">
                   <a href={account.profile_url} target="_blank" rel="noopener noreferrer" className="text-blue-400 underline hover:text-blue-300">{account.username}</a>
