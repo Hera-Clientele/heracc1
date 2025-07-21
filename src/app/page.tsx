@@ -13,6 +13,8 @@ import type { Row } from './lib/fetchDailyAgg';
 import type { AccountWithViews } from './lib/fetchAccountsWithViews';
 import { createClient } from '@supabase/supabase-js';
 import { fetchInstagramDailyAgg } from './lib/fetchInstagramDailyAgg';
+import InstagramWeeklyStats from './components/InstagramWeeklyStats';
+import TikTokWeeklyStats from './components/TikTokWeeklyStats';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -150,6 +152,12 @@ export default function Page() {
             <InstagramViewsChart data={currentData} />
           )}
         </section>
+        {selectedPlatform === 'tiktok' && (
+          <TikTokWeeklyStats data={currentData} />
+        )}
+        {selectedPlatform === 'instagram' && (
+          <InstagramWeeklyStats data={currentData} />
+        )}
         
         {selectedPlatform === 'tiktok' ? <TopPostsCard /> : <InstagramTopPostsCard />}
         
