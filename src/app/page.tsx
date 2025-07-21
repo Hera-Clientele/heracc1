@@ -12,6 +12,7 @@ import PlatformSelector, { Platform } from './components/PlatformSelector';
 import type { Row } from './lib/fetchDailyAgg';
 import type { AccountWithViews } from './lib/fetchAccountsWithViews';
 import { createClient } from '@supabase/supabase-js';
+import { fetchInstagramDailyAgg } from './lib/fetchInstagramDailyAgg';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -27,6 +28,7 @@ export default function Page() {
   const [loading, setLoading] = useState(true);
   const [tiktokError, setTiktokError] = useState<string | null>(null);
   const [instagramError, setInstagramError] = useState<string | null>(null);
+  const [instagramUniqueAccounts, setInstagramUniqueAccounts] = useState<number>(0);
 
   async function fetchAll() {
     setLoading(true);
@@ -47,29 +49,33 @@ export default function Page() {
       setTiktokData(tiktokAggData.data);
       setTiktokAccounts(tiktokAccData.accounts);
       
-      // Try to fetch Instagram data, but don't fail if it doesn't exist yet
+      // Fetch Instagram daily aggregates
+      let instagramAggData: any[] = [];
       try {
-        const [instagramAggRes, instagramAccRes] = await Promise.all([
-          fetch('/api/instagram/daily-agg', { cache: 'no-store' }),
-          fetch('/api/instagram/accounts', { cache: 'no-store' })
-        ]);
-        
-        if (instagramAggRes.ok && instagramAccRes.ok) {
-          const instagramAggData = await instagramAggRes.json();
-          const instagramAccData = await instagramAccRes.json();
-          
-          setInstagramData(instagramAggData.data || []);
-          setInstagramAccounts(instagramAccData.accounts || []);
+        const res = await fetch('/api/instagram/daily-agg', { cache: 'no-store' });
+        if (res.ok) {
+          const json = await res.json();
+          instagramAggData = json.data || [];
+          setInstagramData(instagramAggData);
         } else {
-          // Instagram data not available yet, set empty arrays
           setInstagramData([]);
-          setInstagramAccounts([]);
         }
-      } catch (instagramErr) {
-        // Instagram data not available yet, set empty arrays
+      } catch {
         setInstagramData([]);
-        setInstagramAccounts([]);
       }
+
+      // Fetch unique Instagram accounts from v_latest_instagram
+      try {
+        const { data, error } = await fetchInstagramUniqueAccounts();
+        if (!error && data) {
+          setInstagramUniqueAccounts(data.length);
+        } else {
+          setInstagramUniqueAccounts(0);
+        }
+      } catch {
+        setInstagramUniqueAccounts(0);
+      }
+      setInstagramAccounts([]); // Not used for stats grid anymore
     } catch (err: any) {
       setTiktokError(err.message || 'Error fetching TikTok dashboard data');
     } finally {
@@ -96,7 +102,7 @@ export default function Page() {
   const currentAccounts = selectedPlatform === 'tiktok' ? tiktokAccounts : instagramAccounts;
   const currentError = selectedPlatform === 'tiktok' ? tiktokError : instagramError;
   const platformName = selectedPlatform === 'tiktok' ? 'TikTok' : 'Instagram';
-  const platformLogo = selectedPlatform === 'tiktok' ? '/tiktok-1.svg' : '/instagram.svg';
+  const platformLogo = selectedPlatform === 'tiktok' ? '/tiktok-1.svg' : '/ig.svg';
   const platformDescription = selectedPlatform === 'tiktok' 
     ? 'Your daily TikTok performance at a glance' 
     : 'Your daily Instagram performance at a glance';
@@ -125,7 +131,7 @@ export default function Page() {
           ) : selectedPlatform === 'tiktok' ? (
             <StatsGrid data={currentData} uniqueAccounts={currentAccounts.length} />
           ) : (
-            <InstagramStatsGrid data={currentData} uniqueAccounts={currentAccounts.length} />
+            <InstagramStatsGrid data={currentData} uniqueAccounts={instagramUniqueAccounts} />
           )}
         </section>
         
@@ -158,4 +164,13 @@ export default function Page() {
       </div>
     </main>
   );
+}
+
+// Helper function to fetch unique Instagram accounts
+async function fetchInstagramUniqueAccounts() {
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+  return await supabase.from('v_latest_instagram').select('username').neq('username', null);
 }

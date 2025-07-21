@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React from "react";
 import {
   LineChart,
   Line,
@@ -17,45 +17,39 @@ import timezone from 'dayjs/plugin/timezone';
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
-interface Row {
-  day: string;
-  posts: number;
-  accounts: number;
-  views: number;
-  likes: number;
-  comments: number;
-  shares: number;
-  engagement_rate: number;
+interface InstagramRow {
+  date: string;
+  total_views: number;
+  total_likes: number;
+  total_comments: number;
+  videos_scraped: number;
 }
 
-export default function InstagramViewsChart({ data }: { data: Row[] }) {
-  // Insert initial zero point for 2025-07-07
-  const initialDate = "2025-07-07";
-  const initialRow: Row = {
-    day: initialDate,
-    posts: 0,
-    accounts: 0,
-    views: 0,
-    likes: 0,
-    comments: 0,
-    shares: 0,
-    engagement_rate: 0,
+export default function InstagramViewsChart({ data }: { data: InstagramRow[] }) {
+  // Insert initial zero point for the first date
+  const initialDate = data.length > 0 ? data[0].date : "2025-07-07";
+  const initialRow: InstagramRow = {
+    date: initialDate,
+    total_views: 0,
+    total_likes: 0,
+    total_comments: 0,
+    videos_scraped: 0,
   };
   const dataWithInitial = [initialRow, ...data];
 
   // Compute cumulative views
-  const cumulativeData = dataWithInitial.reduce((acc: Row[], curr, idx) => {
-    const prevTotal = idx > 0 ? acc[idx - 1].views : 0;
-    acc.push({ ...curr, views: prevTotal + curr.views });
+  const cumulativeData = dataWithInitial.reduce((acc: any[], curr, idx) => {
+    const prevTotal = idx > 0 ? acc[idx - 1].total_views : 0;
+    acc.push({ ...curr, total_views: prevTotal + curr.total_views });
     return acc;
   }, []);
 
   // Compute daily views gained per day
   const dailyGains = dataWithInitial.map((row, idx) => {
-    if (idx === 0) return { day: row.day, gain: 0 };
+    if (idx === 0) return { date: row.date, gain: 0 };
     return {
-      day: row.day,
-      gain: row.views,
+      date: row.date,
+      gain: row.total_views,
     };
   });
 
@@ -115,7 +109,7 @@ export default function InstagramViewsChart({ data }: { data: Row[] }) {
           </defs>
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis
-            dataKey="day"
+            dataKey="date"
             tick={{ fontSize: 12 }}
             tickFormatter={(date) => date === initialDate ? "" : dayjs(date).tz('America/New_York').format("MMMM D")}
           />
@@ -123,13 +117,13 @@ export default function InstagramViewsChart({ data }: { data: Row[] }) {
           <Tooltip content={<CustomTooltip />} />
           <Area
             type="linear"
-            dataKey="views"
+            dataKey="total_views"
             stroke="none"
             fill="#ff0000"
           />
           <Line
             type="linear"
-            dataKey="views"
+            dataKey="total_views"
             stroke="#2563eb"
             strokeWidth={2}
             dot={{ r: 3 }}
@@ -150,7 +144,7 @@ export default function InstagramViewsChart({ data }: { data: Row[] }) {
             </defs>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis
-              dataKey="day"
+              dataKey="date"
               tick={{ fontSize: 12 }}
               tickFormatter={(date) => date === initialDate ? "" : dayjs(date).tz('America/New_York').format("MMMM D")}
             />
@@ -186,7 +180,7 @@ export default function InstagramViewsChart({ data }: { data: Row[] }) {
             </defs>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis
-              dataKey="day"
+              dataKey="date"
               tick={{ fontSize: 12 }}
               tickFormatter={(date) => date === initialDate ? "" : dayjs(date).tz('America/New_York').format("MMMM D")}
             />
@@ -194,13 +188,13 @@ export default function InstagramViewsChart({ data }: { data: Row[] }) {
             <Tooltip content={<PostsTooltip />} />
             <Area
               type="linear"
-              dataKey="posts"
+              dataKey="videos_scraped"
               stroke="none"
               fill="url(#colorPosts)"
             />
             <Line
               type="linear"
-              dataKey="posts"
+              dataKey="videos_scraped"
               stroke="#10b981"
               strokeWidth={2}
               dot={{ r: 3 }}

@@ -32,7 +32,7 @@ export default function PlatformSelector({ selectedPlatform, onPlatformChange }:
                 : 'text-slate-400 hover:text-white hover:bg-white/10'
             }`}
           >
-            <img src="/instagram.svg" alt="Instagram" className="h-6 w-6" />
+            <img src="/ig.svg" alt="Instagram" className="h-6 w-6" />
             <span className="font-medium">Instagram</span>
           </button>
         </div>

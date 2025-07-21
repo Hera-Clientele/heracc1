@@ -1,18 +1,15 @@
 import React from 'react';
 
-interface Row {
-  day: string;
-  posts: number;
-  accounts: number;
-  views: number;
-  likes: number;
-  comments: number;
-  shares: number;
-  engagement_rate: number;
+interface InstagramRow {
+  date: string;
+  total_views: number;
+  total_likes: number;
+  total_comments: number;
+  videos_scraped: number;
 }
 
 interface InstagramStatsGridProps {
-  data: Row[];
+  data: InstagramRow[];
   uniqueAccounts?: number;
 }
 
@@ -22,17 +19,16 @@ function sum(arr: number[]) {
 
 export default function InstagramStatsGrid({ data, uniqueAccounts }: InstagramStatsGridProps) {
   const totals = {
-    views: sum(data.map((r) => r.views)),
-    likes: sum(data.map((r) => r.likes)),
-    comments: sum(data.map((r) => r.comments)),
-    shares: sum(data.map((r) => r.shares)),
-    posts: sum(data.map((r) => r.posts)),
-    accounts: sum(data.map((r) => r.accounts)),
+    views: sum(data.map((r) => r.total_views)),
+    likes: sum(data.map((r) => r.total_likes)),
+    comments: sum(data.map((r) => r.total_comments)),
+    posts: sum(data.map((r) => r.videos_scraped)),
+    accounts: uniqueAccounts || 0,
   };
-  const engagement = totals.views === 0 ? 0 : ((totals.likes + totals.comments + totals.shares) / totals.views) * 100;
+  const engagement = totals.views === 0 ? 0 : ((totals.likes + totals.comments) / totals.views) * 100;
 
   const cards = [
-    { label: 'Total Accounts', value: (uniqueAccounts !== undefined ? uniqueAccounts : totals.accounts).toLocaleString() },
+    { label: 'Total Accounts', value: totals.accounts.toLocaleString() },
     { label: 'Total Posts', value: totals.posts.toLocaleString() },
     { label: 'Total Views', value: totals.views.toLocaleString() },
     { label: 'Engagement %', value: engagement.toFixed(2) },

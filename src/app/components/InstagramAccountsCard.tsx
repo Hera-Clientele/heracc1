@@ -2,14 +2,14 @@
 import React, { useEffect, useState } from 'react';
 
 interface InstagramAccount {
-  id: string;
   username: string;
-  full_name: string;
-  profile_picture_url: string;
-  followers_count: number;
-  media_count: number;
-  total_likes: number;
-  total_comments: number;
+  profile_url: string;
+  views: number;
+  likes: number;
+  comments: number;
+  posts: number;
+  highest_view_post: number;
+  avg_views: number;
 }
 
 export default function InstagramAccountsCard() {
@@ -20,9 +20,9 @@ export default function InstagramAccountsCard() {
   useEffect(() => {
     async function fetchAccounts() {
       try {
-        const response = await fetch('/api/instagram/accounts', { cache: 'no-store' });
-        if (!response.ok) throw new Error('Failed to fetch Instagram accounts');
-        const data = await response.json();
+        const res = await fetch('/api/instagram/accounts', { cache: 'no-store' });
+        if (!res.ok) throw new Error('Failed to fetch Instagram accounts');
+        const data = await res.json();
         setAccounts(data.accounts || []);
       } catch (err: any) {
         setError(err.message || 'Error fetching Instagram accounts');
@@ -30,7 +30,6 @@ export default function InstagramAccountsCard() {
         setLoading(false);
       }
     }
-
     fetchAccounts();
   }, []);
 
@@ -55,51 +54,30 @@ export default function InstagramAccountsCard() {
   return (
     <div className="backdrop-blur-md bg-white/5 border border-white/10 rounded-2xl shadow-xl p-6 mt-6">
       <h2 className="text-xl font-semibold text-white mb-4">Instagram Accounts</h2>
-      {accounts.length === 0 ? (
-        <div className="text-slate-400 text-center py-8">No Instagram accounts available</div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {accounts.map((account) => (
-            <div
-              key={account.id}
-              className="bg-white/5 border border-white/10 rounded-xl p-4 hover:bg-white/10 transition-all duration-300"
-            >
-              <div className="flex items-center space-x-3 mb-3">
-                <img
-                  src={account.profile_picture_url}
-                  alt={account.username}
-                  className="w-12 h-12 rounded-full object-cover"
-                  onError={(e) => {
-                    e.currentTarget.src = '/globe.svg';
-                  }}
-                />
-                <div>
-                  <h3 className="text-white font-medium">@{account.username}</h3>
-                  <p className="text-slate-400 text-sm">{account.full_name}</p>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div className="text-center">
-                  <p className="text-white font-semibold">{account.followers_count.toLocaleString()}</p>
-                  <p className="text-slate-400">Followers</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-white font-semibold">{account.media_count.toLocaleString()}</p>
-                  <p className="text-slate-400">Posts</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-white font-semibold">{account.total_likes.toLocaleString()}</p>
-                  <p className="text-slate-400">Total Likes</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-white font-semibold">{account.total_comments.toLocaleString()}</p>
-                  <p className="text-slate-400">Comments</p>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+      <div className="overflow-x-auto">
+        <table className="min-w-full text-white">
+          <thead>
+            <tr className="text-slate-300 text-sm uppercase">
+              <th className="px-4 py-2 text-left">Username</th>
+              <th className="px-4 py-2 text-center">Highest View Post</th>
+              <th className="px-4 py-2 text-center">Posts</th>
+              <th className="px-4 py-2 text-center">Avg Views</th>
+            </tr>
+          </thead>
+          <tbody>
+            {accounts.map((account) => (
+              <tr key={account.username} className="hover:bg-slate-800/40 transition">
+                <td className="px-4 py-2 font-mono">
+                  <a href={account.profile_url} target="_blank" rel="noopener noreferrer" className="text-blue-400 underline hover:text-blue-300">{account.username}</a>
+                </td>
+                <td className="px-4 py-2 text-center">{account.highest_view_post.toLocaleString()}</td>
+                <td className="px-4 py-2 text-center">{account.posts}</td>
+                <td className="px-4 py-2 text-center">{account.avg_views.toLocaleString()}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 } 
