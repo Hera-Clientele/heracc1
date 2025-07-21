@@ -4,6 +4,11 @@ import StatsGrid from './components/StatsGrid';
 import ViewsChart from './components/ViewsChart';
 import TopPostsCard from './components/TopPostsCard';
 import AccountsCard from './components/AccountsCard';
+import InstagramStatsGrid from './components/InstagramStatsGrid';
+import InstagramViewsChart from './components/InstagramViewsChart';
+import InstagramTopPostsCard from './components/InstagramTopPostsCard';
+import InstagramAccountsCard from './components/InstagramAccountsCard';
+import PlatformSelector, { Platform } from './components/PlatformSelector';
 import type { Row } from './lib/fetchDailyAgg';
 import type { AccountWithViews } from './lib/fetchAccountsWithViews';
 import { createClient } from '@supabase/supabase-js';
@@ -14,26 +19,59 @@ const supabase = createClient(
 );
 
 export default function Page() {
-  const [data, setData] = useState<Row[]>([]);
-  const [accounts, setAccounts] = useState<AccountWithViews[]>([]);
+  const [selectedPlatform, setSelectedPlatform] = useState<Platform>('tiktok');
+  const [tiktokData, setTiktokData] = useState<Row[]>([]);
+  const [tiktokAccounts, setTiktokAccounts] = useState<AccountWithViews[]>([]);
+  const [instagramData, setInstagramData] = useState<any[]>([]);
+  const [instagramAccounts, setInstagramAccounts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [tiktokError, setTiktokError] = useState<string | null>(null);
+  const [instagramError, setInstagramError] = useState<string | null>(null);
 
   async function fetchAll() {
     setLoading(true);
-    setError(null);
+    setTiktokError(null);
+    setInstagramError(null);
     try {
-      const [aggRes, accRes] = await Promise.all([
+      // Always fetch TikTok data (original functionality)
+      const [tiktokAggRes, tiktokAccRes] = await Promise.all([
         fetch('/api/daily-agg', { cache: 'no-store' }),
         fetch('/api/accounts', { cache: 'no-store' })
       ]);
-      if (!aggRes.ok || !accRes.ok) throw new Error('Failed to fetch dashboard data');
-      const aggData = await aggRes.json();
-      const accData = await accRes.json();
-      setData(aggData.data);
-      setAccounts(accData.accounts);
+      
+      if (!tiktokAggRes.ok || !tiktokAccRes.ok) throw new Error('Failed to fetch TikTok dashboard data');
+      
+      const tiktokAggData = await tiktokAggRes.json();
+      const tiktokAccData = await tiktokAccRes.json();
+      
+      setTiktokData(tiktokAggData.data);
+      setTiktokAccounts(tiktokAccData.accounts);
+      
+      // Try to fetch Instagram data, but don't fail if it doesn't exist yet
+      try {
+        const [instagramAggRes, instagramAccRes] = await Promise.all([
+          fetch('/api/instagram/daily-agg', { cache: 'no-store' }),
+          fetch('/api/instagram/accounts', { cache: 'no-store' })
+        ]);
+        
+        if (instagramAggRes.ok && instagramAccRes.ok) {
+          const instagramAggData = await instagramAggRes.json();
+          const instagramAccData = await instagramAccRes.json();
+          
+          setInstagramData(instagramAggData.data || []);
+          setInstagramAccounts(instagramAccData.accounts || []);
+        } else {
+          // Instagram data not available yet, set empty arrays
+          setInstagramData([]);
+          setInstagramAccounts([]);
+        }
+      } catch (instagramErr) {
+        // Instagram data not available yet, set empty arrays
+        setInstagramData([]);
+        setInstagramAccounts([]);
+      }
     } catch (err: any) {
-      setError(err.message || 'Error fetching dashboard data');
+      setTiktokError(err.message || 'Error fetching TikTok dashboard data');
     } finally {
       setLoading(false);
     }
@@ -54,25 +92,69 @@ export default function Page() {
     };
   }, []);
 
+  const currentData = selectedPlatform === 'tiktok' ? tiktokData : instagramData;
+  const currentAccounts = selectedPlatform === 'tiktok' ? tiktokAccounts : instagramAccounts;
+  const currentError = selectedPlatform === 'tiktok' ? tiktokError : instagramError;
+  const platformName = selectedPlatform === 'tiktok' ? 'TikTok' : 'Instagram';
+  const platformLogo = selectedPlatform === 'tiktok' ? '/tiktok-1.svg' : '/instagram.svg';
+  const platformDescription = selectedPlatform === 'tiktok' 
+    ? 'Your daily TikTok performance at a glance' 
+    : 'Your daily Instagram performance at a glance';
+
   return (
     <main className="min-h-screen bg-gradient-to-br from-[#18181b] to-[#23272f] flex flex-col items-center py-12 font-sans">
       <div className="w-full max-w-4xl">
         <header className="mb-8 flex flex-col items-center">
           <h1 className="text-4xl font-extrabold text-white tracking-tight mb-2 drop-shadow flex items-center gap-3">
-            <img src="/tiktok-1.svg" alt="TikTok Logo" className="h-10 w-10" />
-            TikTok Dashboard
+            <img src={platformLogo} alt={`${platformName} Logo`} className="h-10 w-10" />
+            {platformName} Dashboard
           </h1>
-          <p className="text-slate-400 text-lg">Your daily TikTok performance at a glance</p>
+          <p className="text-slate-400 text-lg">{platformDescription}</p>
         </header>
+        
+        <PlatformSelector 
+          selectedPlatform={selectedPlatform} 
+          onPlatformChange={setSelectedPlatform} 
+        />
+        
         <section className="mb-10">
-          {loading ? <div className="text-slate-300 py-8 text-center">Loading...</div> : error ? <div className="text-red-400 py-8 text-center">{error}</div> : <StatsGrid data={data} uniqueAccounts={accounts.length} />}
+          {loading ? (
+            <div className="text-slate-300 py-8 text-center">Loading...</div>
+          ) : currentError ? (
+            <div className="text-red-400 py-8 text-center">{currentError}</div>
+          ) : selectedPlatform === 'tiktok' ? (
+            <StatsGrid data={currentData} uniqueAccounts={currentAccounts.length} />
+          ) : (
+            <InstagramStatsGrid data={currentData} uniqueAccounts={currentAccounts.length} />
+          )}
         </section>
+        
         <section className="backdrop-blur-md bg-white/5 border border-white/10 rounded-2xl shadow-xl p-6">
-          <h2 className="text-xl font-semibold text-white mb-4">Total Views Over Time</h2>
-          {loading ? <div className="text-slate-300 py-8 text-center">Loading...</div> : error ? <div className="text-red-400 py-8 text-center">{error}</div> : <ViewsChart data={data} />}
+          <h2 className="text-xl font-semibold text-white mb-4">
+            {selectedPlatform === 'tiktok' ? 'Total Views Over Time' : 'Performance Over Time'}
+          </h2>
+          {loading ? (
+            <div className="text-slate-300 py-8 text-center">Loading...</div>
+          ) : currentError ? (
+            <div className="text-red-400 py-8 text-center">{currentError}</div>
+          ) : selectedPlatform === 'tiktok' ? (
+            <ViewsChart data={currentData} />
+          ) : (
+            <InstagramViewsChart data={currentData} />
+          )}
         </section>
-        <TopPostsCard />
-        {loading ? <div className="text-slate-300 py-8 text-center">Loading...</div> : error ? <div className="text-red-400 py-8 text-center">{error}</div> : <AccountsCard accounts={accounts} />}
+        
+        {selectedPlatform === 'tiktok' ? <TopPostsCard /> : <InstagramTopPostsCard />}
+        
+        {loading ? (
+          <div className="text-slate-300 py-8 text-center">Loading...</div>
+        ) : currentError ? (
+          <div className="text-red-400 py-8 text-center">{currentError}</div>
+        ) : selectedPlatform === 'tiktok' ? (
+          <AccountsCard accounts={currentAccounts} />
+        ) : (
+          <InstagramAccountsCard />
+        )}
       </div>
     </main>
   );

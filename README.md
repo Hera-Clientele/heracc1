@@ -1,36 +1,108 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Multi-Platform Social Media Dashboard
+
+A modern, real-time dashboard for monitoring TikTok and Instagram performance metrics.
+
+## Features
+
+### TikTok Dashboard
+- Real-time performance metrics
+- Daily aggregation statistics
+- Top performing posts
+- Account overview with follower counts
+- Interactive charts and visualizations
+
+### Instagram Dashboard
+- Follower growth tracking
+- Post engagement metrics (likes, comments, shares)
+- Top performing Instagram posts
+- Account performance overview
+- Performance trends over time
+
+### Multi-Platform Support
+- Platform selector to switch between TikTok and Instagram
+- Consistent UI/UX across both platforms
+- Real-time data updates
+- Responsive design for all devices
+
+## Tech Stack
+
+- **Frontend**: Next.js 14, React, TypeScript
+- **Styling**: Tailwind CSS
+- **Charts**: Recharts
+- **Database**: Supabase (PostgreSQL)
+- **Real-time**: Supabase Realtime
 
 ## Getting Started
 
-First, run the development server:
+1. Install dependencies:
+   ```bash
+   npm install
+   ```
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+2. Set up environment variables:
+   ```env
+   NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+   ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+3. Run the development server:
+   ```bash
+   npm run dev
+   ```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+4. Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Database Schema
 
-## Learn More
+The dashboard expects the following tables in your Supabase database:
 
-To learn more about Next.js, take a look at the following resources:
+### TikTok Tables
+- `daily_agg` - Daily aggregated TikTok metrics
+- `latest_snapshots` - Latest TikTok account snapshots
+- `v_daily_video` - Daily video performance view
+- `v_daily_video_delta` - Daily video performance delta view
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Instagram Tables
+- `instagram_daily_agg` - Daily aggregated Instagram metrics
+- `instagram_accounts` - Instagram account information
+- `instagram_posts` - Instagram post data
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## API Endpoints
 
-## Deploy on Vercel
+### TikTok
+- `GET /api/daily-agg` - Get daily aggregated TikTok data
+- `GET /api/accounts` - Get TikTok accounts with views
+- `GET /api/top-posts` - Get top performing TikTok posts
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Instagram
+- `GET /api/instagram/daily-agg` - Get daily aggregated Instagram data
+- `GET /api/instagram/accounts` - Get Instagram accounts
+- `GET /api/instagram/top-posts` - Get top performing Instagram posts
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Components
+
+### Shared Components
+- `PlatformSelector` - Switch between TikTok and Instagram dashboards
+
+### TikTok Components
+- `StatsGrid` - Display TikTok performance metrics
+- `ViewsChart` - Chart showing TikTok views over time
+- `TopPostsCard` - Display top performing TikTok posts
+- `AccountsCard` - Display TikTok account information
+
+### Instagram Components
+- `InstagramStatsGrid` - Display Instagram performance metrics
+- `InstagramViewsChart` - Chart showing Instagram performance over time
+- `InstagramTopPostsCard` - Display top performing Instagram posts
+- `InstagramAccountsCard` - Display Instagram account information
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Submit a pull request
+
+## License
+
+MIT License
