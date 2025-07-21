@@ -1,6 +1,8 @@
 "use client";
 import React, { useState } from "react";
 import dayjs from "dayjs";
+import isoWeek from 'dayjs/plugin/isoWeek';
+dayjs.extend(isoWeek);
 
 interface TikTokRow {
   day: string;
