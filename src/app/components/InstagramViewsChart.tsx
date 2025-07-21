@@ -19,39 +19,34 @@ dayjs.extend(timezone);
 
 interface InstagramRow {
   date: string;
-  total_views: number;
-  total_likes: number;
-  total_comments: number;
-  videos_scraped: number;
+  total_views: number | string;
+  total_likes: number | string;
+  total_comments: number | string;
+  videos_scraped: number | string;
 }
 
 export default function InstagramViewsChart({ data }: { data: InstagramRow[] }) {
-  // Insert initial zero point for the first date
-  const initialDate = data.length > 0 ? data[0].date : "2025-07-07";
-  const initialRow: InstagramRow = {
-    date: initialDate,
-    total_views: 0,
-    total_likes: 0,
-    total_comments: 0,
-    videos_scraped: 0,
-  };
-  const dataWithInitial = [initialRow, ...data];
+  // Ensure all fields are numbers
+  const chartData = data.map(row => ({
+    date: row.date,
+    total_views: Number(row.total_views),
+    total_likes: Number(row.total_likes),
+    total_comments: Number(row.total_comments),
+    videos_scraped: Number(row.videos_scraped),
+  }));
 
   // Compute cumulative views
-  const cumulativeData = dataWithInitial.reduce((acc: any[], curr, idx) => {
+  const cumulativeData = chartData.reduce((acc: any[], curr, idx) => {
     const prevTotal = idx > 0 ? acc[idx - 1].total_views : 0;
     acc.push({ ...curr, total_views: prevTotal + curr.total_views });
     return acc;
   }, []);
 
   // Compute daily views gained per day
-  const dailyGains = dataWithInitial.map((row, idx) => {
-    if (idx === 0) return { date: row.date, gain: 0 };
-    return {
-      date: row.date,
-      gain: row.total_views,
-    };
-  });
+  const dailyGains = chartData.map((row) => ({
+    date: row.date,
+    gain: row.total_views,
+  }));
 
   // Custom Tooltip
   const CustomTooltip = ({ active, payload, label }: any) => {
@@ -71,7 +66,6 @@ export default function InstagramViewsChart({ data }: { data: InstagramRow[] }) 
   const DailyGainTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       const gain = payload[0].value;
-      if (gain === 0 && label === initialDate) return null;
       return (
         <div className="bg-slate-900/90 p-3 rounded-lg shadow text-white border border-slate-700">
           <div className="font-semibold mb-1">{dayjs(label).tz('America/New_York').format("MMMM D")}</div>
@@ -86,7 +80,6 @@ export default function InstagramViewsChart({ data }: { data: InstagramRow[] }) 
   const PostsTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       const posts = payload[0].value;
-      if (posts === 0 && label === initialDate) return null;
       return (
         <div className="bg-slate-900/90 p-3 rounded-lg shadow text-white border border-slate-700">
           <div className="font-semibold mb-1">{dayjs(label).tz('America/New_York').format("MMMM D")}</div>
@@ -111,7 +104,7 @@ export default function InstagramViewsChart({ data }: { data: InstagramRow[] }) 
           <XAxis
             dataKey="date"
             tick={{ fontSize: 12 }}
-            tickFormatter={(date) => date === initialDate ? "" : dayjs(date).tz('America/New_York').format("MMMM D")}
+            tickFormatter={(date) => dayjs(date).tz('America/New_York').format("MMMM D")}
           />
           <YAxis tick={{ fontSize: 12 }} allowDecimals={false} domain={[0, 'auto']} tickFormatter={tick => tick === 0 ? '' : tick} />
           <Tooltip content={<CustomTooltip />} />
@@ -146,7 +139,7 @@ export default function InstagramViewsChart({ data }: { data: InstagramRow[] }) 
             <XAxis
               dataKey="date"
               tick={{ fontSize: 12 }}
-              tickFormatter={(date) => date === initialDate ? "" : dayjs(date).tz('America/New_York').format("MMMM D")}
+              tickFormatter={(date) => dayjs(date).tz('America/New_York').format("MMMM D")}
             />
             <YAxis tick={{ fontSize: 12 }} allowDecimals={false} domain={[0, 'auto']} tickFormatter={tick => tick === 0 ? '' : tick} />
             <Tooltip content={<DailyGainTooltip />} />
@@ -171,7 +164,7 @@ export default function InstagramViewsChart({ data }: { data: InstagramRow[] }) 
       <div className="mt-8">
         <div className="font-semibold text-lg mb-2 text-white">Daily Posts</div>
         <ResponsiveContainer width="100%" height={200}>
-          <LineChart data={dataWithInitial} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+          <LineChart data={chartData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
             <defs>
               <linearGradient id="colorPosts" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor="#10b981" stopOpacity={0.5}/>
@@ -182,7 +175,7 @@ export default function InstagramViewsChart({ data }: { data: InstagramRow[] }) 
             <XAxis
               dataKey="date"
               tick={{ fontSize: 12 }}
-              tickFormatter={(date) => date === initialDate ? "" : dayjs(date).tz('America/New_York').format("MMMM D")}
+              tickFormatter={(date) => dayjs(date).tz('America/New_York').format("MMMM D")}
             />
             <YAxis tick={{ fontSize: 12 }} allowDecimals={false} domain={[0, 'auto']} tickFormatter={tick => tick === 0 ? '' : tick} />
             <Tooltip content={<PostsTooltip />} />

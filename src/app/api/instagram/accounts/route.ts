@@ -38,7 +38,7 @@ export async function GET() {
     // Sort by highest_view_post descending
     accounts.sort((a, b) => b.highest_view_post - a.highest_view_post);
 
-    return NextResponse.json({ accounts });
+    return NextResponse.json({ accounts, totalAccounts: accounts.length });
   } catch (error: any) {
     return NextResponse.json(
       { error: 'Failed to fetch Instagram accounts data' },

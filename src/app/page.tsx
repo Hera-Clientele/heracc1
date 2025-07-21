@@ -64,11 +64,12 @@ export default function Page() {
         setInstagramData([]);
       }
 
-      // Fetch unique Instagram accounts from v_latest_instagram
+      // Fetch unique Instagram accounts count from accounts API
       try {
-        const { data, error } = await fetchInstagramUniqueAccounts();
-        if (!error && data) {
-          setInstagramUniqueAccounts(data.length);
+        const res = await fetch('/api/instagram/accounts', { cache: 'no-store' });
+        if (res.ok) {
+          const json = await res.json();
+          setInstagramUniqueAccounts(json.totalAccounts || 0);
         } else {
           setInstagramUniqueAccounts(0);
         }
