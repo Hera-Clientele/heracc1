@@ -120,7 +120,8 @@ export default function ViewsChart({ data }: { data: Row[] }) {
           <XAxis
             dataKey="day"
             tick={{ fontSize: 12 }}
-            tickFormatter={(date) => date === initialDate ? "" : dayjs(date).tz('America/New_York').format("MMMM D")}
+            tickFormatter={(date) => date === initialDate ? "" : dayjs(date).tz('America/New_York').format("MM/DD")}
+            interval={0}
           />
           <YAxis tick={{ fontSize: 12 }} allowDecimals={false} domain={[0, 'auto']} tickFormatter={tick => tick === 0 ? '' : tick} />
           <Tooltip content={<CustomTooltip />} />
@@ -155,7 +156,8 @@ export default function ViewsChart({ data }: { data: Row[] }) {
             <XAxis
               dataKey="day"
               tick={{ fontSize: 12 }}
-              tickFormatter={(date) => date === initialDate ? "" : dayjs(date).tz('America/New_York').format("MMMM D")}
+              tickFormatter={(date) => date === initialDate ? "" : dayjs(date).tz('America/New_York').format("MM/DD")}
+              interval={0}
             />
             <YAxis tick={{ fontSize: 12 }} allowDecimals={false} domain={[0, 'auto']} tickFormatter={tick => tick === 0 ? '' : tick} />
             <Tooltip content={<DailyGainTooltip />} />
@@ -191,7 +193,8 @@ export default function ViewsChart({ data }: { data: Row[] }) {
             <XAxis
               dataKey="day"
               tick={{ fontSize: 12 }}
-              tickFormatter={(date) => date === initialDate ? "" : dayjs(date).tz('America/New_York').format("MMMM D")}
+              tickFormatter={(date) => date === initialDate ? "" : dayjs(date).tz('America/New_York').format("MM/DD")}
+              interval={0}
             />
             <YAxis tick={{ fontSize: 12 }} allowDecimals={false} domain={[0, 'auto']} tickFormatter={tick => tick === 0 ? '' : tick} />
             <Tooltip content={<PostsTooltip />} />
