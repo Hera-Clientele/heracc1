@@ -129,7 +129,7 @@ export default function Page() {
         />
         
         <section className="mb-10">
-          <h3 className="text-lg font-semibold text-white mb-4">All Time Performance</h3>
+          <h3 className="text-lg font-semibold text-white mb-4">All Time Performance ({Math.floor((new Date().getTime() - new Date('2025-07-07').getTime()) / (1000 * 60 * 60 * 24))} days since Jul 7)</h3>
           {loading ? (
             <div className="text-slate-300 py-8 text-center">Loading...</div>
           ) : currentError ? (
