@@ -32,9 +32,8 @@ interface Row {
 function getNextUpdateTime() {
   const now = dayjs().tz('America/New_York');
   const updateTimes = [
-    { hour: 3, minute: 0 },   // 3 AM EST
-    { hour: 15, minute: 0 },  // 3 PM EST
-    { hour: 19, minute: 55 }  // 7:55 PM EST
+    { hour: 12, minute: 0 },   // 12:00 PM EST (noon)
+    { hour: 19, minute: 55 }   // 7:55 PM EST
   ];
 
   // Find the next update time
@@ -46,16 +45,15 @@ function getNextUpdateTime() {
   }
 
   // If all times have passed today, return the first time tomorrow
-  return now.add(1, 'day').hour(3).minute(0).second(0).millisecond(0);
+  return now.add(1, 'day').hour(12).minute(0).second(0).millisecond(0);
 }
 
 // Utility function to get last update time (assuming it's the most recent update time before now)
 function getLastUpdateTime() {
   const now = dayjs().tz('America/New_York');
   const updateTimes = [
-    { hour: 3, minute: 0 },   // 3 AM EST
-    { hour: 15, minute: 0 },  // 3 PM EST
-    { hour: 19, minute: 55 }  // 7:55 PM EST
+    { hour: 12, minute: 0 },   // 12:00 PM EST (noon)
+    { hour: 19, minute: 55 }   // 7:55 PM EST
   ];
 
   // Find the most recent update time
