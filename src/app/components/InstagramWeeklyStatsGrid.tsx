@@ -1,4 +1,5 @@
-import React from 'react';
+"use client";
+import React, { useEffect, useState } from 'react';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
@@ -39,6 +40,9 @@ function getWeekRange(dates: string[]): string {
 }
 
 export default function InstagramWeeklyStatsGrid({ data, uniqueAccounts }: InstagramWeeklyStatsGridProps) {
+  const [preciseUniqueAccounts, setPreciseUniqueAccounts] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
+  
   const currentWeek = getCurrentWeekNumber();
 
   // Group data by week number and get current week data
@@ -68,16 +72,32 @@ export default function InstagramWeeklyStatsGrid({ data, uniqueAccounts }: Insta
   // Calculate weekly engagement rate
   const weeklyEngagement = weeklyTotals.views === 0 ? 0 : ((weeklyTotals.likes + weeklyTotals.comments) / weeklyTotals.views) * 100;
 
-  // Count days with posts this week
-  const activeDaysThisWeek = currentWeekData.filter(row => row.videos_scraped > 0).length;
+  // Fetch precise unique accounts from API
+  useEffect(() => {
+    async function fetchUniqueAccounts() {
+      try {
+        const response = await fetch('/api/instagram-weekly-accounts', { cache: 'no-store' });
+        if (response.ok) {
+          const data = await response.json();
+          setPreciseUniqueAccounts(data.uniqueAccounts);
+        }
+      } catch (error) {
+        console.error('Failed to fetch Instagram unique accounts:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    
+    fetchUniqueAccounts();
+  }, []);
 
   // Get week range for display
   const weekRange = getWeekRange(currentWeekData.map(r => r.date));
 
   const cards = [
     { 
-      label: 'Active Days This Week', 
-      value: activeDaysThisWeek.toString()
+      label: 'Accounts Posting', 
+      value: preciseUniqueAccounts !== null ? preciseUniqueAccounts.toString() : (loading ? '...' : '0')
     },
     { 
       label: 'Posts This Week', 
@@ -88,7 +108,7 @@ export default function InstagramWeeklyStatsGrid({ data, uniqueAccounts }: Insta
       value: weeklyTotals.views.toLocaleString()
     },
     { 
-      label: 'Weekly Engagement %', 
+      label: 'Engagement %', 
       value: weeklyEngagement.toFixed(2)
     },
   ];
