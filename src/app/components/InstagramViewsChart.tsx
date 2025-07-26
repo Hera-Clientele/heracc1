@@ -25,6 +25,37 @@ interface InstagramRow {
   videos_scraped: number | string;
 }
 
+// Utility function to calculate next update time
+function getNextUpdateTime() {
+  const now = dayjs().tz('America/New_York');
+  const updateTime = { hour: 19, minute: 55 }; // 7:55 PM EST
+
+  // Find the next update time
+  const nextUpdate = now.hour(updateTime.hour).minute(updateTime.minute).second(0).millisecond(0);
+  if (nextUpdate.isAfter(now)) {
+    return nextUpdate;
+  }
+
+  // If the time has passed today, return tomorrow at 7:55 PM
+  return now.add(1, 'day').hour(updateTime.hour).minute(updateTime.minute).second(0).millisecond(0);
+}
+
+// Utility function to get last update time (assuming it's the most recent update time before now)
+function getLastUpdateTime() {
+  const now = dayjs().tz('America/New_York');
+  const updateTime = { hour: 19, minute: 55 }; // 7:55 PM EST
+
+  // Find the most recent update time
+  const lastUpdate = now.hour(updateTime.hour).minute(updateTime.minute).second(0).millisecond(0);
+  
+  // If the update time hasn't occurred today yet, return yesterday's update time
+  if (lastUpdate.isAfter(now)) {
+    return now.subtract(1, 'day').hour(updateTime.hour).minute(updateTime.minute).second(0).millisecond(0);
+  }
+
+  return lastUpdate;
+}
+
 export default function InstagramViewsChart({ data }: { data: InstagramRow[] }) {
   // Ensure all fields are numbers
   const chartData = data.map(row => ({
@@ -47,6 +78,10 @@ export default function InstagramViewsChart({ data }: { data: InstagramRow[] }) 
     date: row.date,
     gain: row.total_views,
   }));
+
+  // Get update times
+  const lastUpdate = getLastUpdateTime();
+  const nextUpdate = getNextUpdateTime();
 
   // Custom Tooltip
   const CustomTooltip = ({ active, payload, label }: any) => {
@@ -127,7 +162,13 @@ export default function InstagramViewsChart({ data }: { data: InstagramRow[] }) 
       </ResponsiveContainer>
       {/* New chart for daily views gained */}
       <div className="mt-8">
-        <div className="font-semibold text-lg mb-2 text-white">Daily Views Gained</div>
+        <div className="flex justify-between items-center mb-2">
+          <div className="font-semibold text-lg text-white">Daily Views Gained</div>
+          <div className="text-xs text-slate-400 space-x-4">
+            <span>Last updated: {lastUpdate.format('MMM D, h:mm A')}</span>
+            <span>Next update: {nextUpdate.format('MMM D, h:mm A')}</span>
+          </div>
+        </div>
         <ResponsiveContainer width="100%" height={200}>
           <LineChart data={dailyGains} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
             <defs>

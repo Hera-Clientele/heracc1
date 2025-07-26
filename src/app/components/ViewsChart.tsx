@@ -28,6 +28,55 @@ interface Row {
   engagement_rate: number;
 }
 
+// Utility function to calculate next update time
+function getNextUpdateTime() {
+  const now = dayjs().tz('America/New_York');
+  const updateTimes = [
+    { hour: 3, minute: 0 },   // 3 AM EST
+    { hour: 15, minute: 0 },  // 3 PM EST
+    { hour: 19, minute: 55 }  // 7:55 PM EST
+  ];
+
+  // Find the next update time
+  for (const time of updateTimes) {
+    const nextUpdate = now.hour(time.hour).minute(time.minute).second(0).millisecond(0);
+    if (nextUpdate.isAfter(now)) {
+      return nextUpdate;
+    }
+  }
+
+  // If all times have passed today, return the first time tomorrow
+  return now.add(1, 'day').hour(3).minute(0).second(0).millisecond(0);
+}
+
+// Utility function to get last update time (assuming it's the most recent update time before now)
+function getLastUpdateTime() {
+  const now = dayjs().tz('America/New_York');
+  const updateTimes = [
+    { hour: 3, minute: 0 },   // 3 AM EST
+    { hour: 15, minute: 0 },  // 3 PM EST
+    { hour: 19, minute: 55 }  // 7:55 PM EST
+  ];
+
+  // Find the most recent update time
+  let lastUpdate = null;
+  for (const time of updateTimes) {
+    const updateTime = now.hour(time.hour).minute(time.minute).second(0).millisecond(0);
+    if (updateTime.isBefore(now) || updateTime.isSame(now)) {
+      if (!lastUpdate || updateTime.isAfter(lastUpdate)) {
+        lastUpdate = updateTime;
+      }
+    }
+  }
+
+  // If no update time found today, return the last time from yesterday
+  if (!lastUpdate) {
+    return now.subtract(1, 'day').hour(19).minute(55).second(0).millisecond(0);
+  }
+
+  return lastUpdate;
+}
+
 export default function ViewsChart({ data }: { data: Row[] }) {
   // Insert initial zero point for 2025-07-07
   const initialDate = "2025-07-07";
@@ -58,6 +107,10 @@ export default function ViewsChart({ data }: { data: Row[] }) {
       gain: row.views,
     };
   });
+
+  // Get update times
+  const lastUpdate = getLastUpdateTime();
+  const nextUpdate = getNextUpdateTime();
 
   // Custom Tooltip
   const CustomTooltip = ({ active, payload, label }: any) => {
@@ -143,7 +196,13 @@ export default function ViewsChart({ data }: { data: Row[] }) {
       </ResponsiveContainer>
       {/* New chart for daily views gained */}
       <div className="mt-8">
-        <div className="font-semibold text-lg mb-2 text-white">Daily Views Gained</div>
+        <div className="flex justify-between items-center mb-2">
+          <div className="font-semibold text-lg text-white">Daily Views Gained</div>
+          <div className="text-xs text-slate-400 space-x-4">
+            <span>Last updated: {lastUpdate.format('MMM D, h:mm A')}</span>
+            <span>Next update: {nextUpdate.format('MMM D, h:mm A')}</span>
+          </div>
+        </div>
         <ResponsiveContainer width="100%" height={200}>
           <LineChart data={dailyGains} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
             <defs>
