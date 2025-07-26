@@ -1,6 +1,8 @@
 "use client";
 import React, { useEffect, useState } from 'react';
 import StatsGrid from './components/StatsGrid';
+import WeeklyStatsGrid from './components/WeeklyStatsGrid';
+import InstagramWeeklyStatsGrid from './components/InstagramWeeklyStatsGrid';
 import ViewsChart from './components/ViewsChart';
 import TopPostsCard from './components/TopPostsCard';
 import AccountsCard from './components/AccountsCard';
@@ -127,6 +129,7 @@ export default function Page() {
         />
         
         <section className="mb-10">
+          <h3 className="text-lg font-semibold text-white mb-4">All Time Performance</h3>
           {loading ? (
             <div className="text-slate-300 py-8 text-center">Loading...</div>
           ) : currentError ? (
@@ -135,6 +138,19 @@ export default function Page() {
             <StatsGrid data={currentData} uniqueAccounts={currentAccounts.length} />
           ) : (
             <InstagramStatsGrid data={currentData} uniqueAccounts={instagramUniqueAccounts} />
+          )}
+        </section>
+        
+        {/* Weekly Stats Section */}
+        <section className="mb-10">
+          {loading ? (
+            <div className="text-slate-300 py-8 text-center">Loading...</div>
+          ) : currentError ? (
+            <div className="text-red-400 py-8 text-center">{currentError}</div>
+          ) : selectedPlatform === 'tiktok' ? (
+            <WeeklyStatsGrid data={currentData} uniqueAccounts={currentAccounts.length} />
+          ) : (
+            <InstagramWeeklyStatsGrid data={currentData} uniqueAccounts={instagramUniqueAccounts} />
           )}
         </section>
         
