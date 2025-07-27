@@ -4,6 +4,9 @@ import StatsGrid from './components/StatsGrid';
 import WeeklyStatsGrid from './components/WeeklyStatsGrid';
 import InstagramWeeklyStatsGrid from './components/InstagramWeeklyStatsGrid';
 import ViewsChart from './components/ViewsChart';
+import TotalViewsChart from './components/TotalViewsChart';
+import InstagramTotalViewsChart from './components/InstagramTotalViewsChart';
+import DateRangeSelector, { DateRange } from './components/DateRangeSelector';
 import TopPostsCard from './components/TopPostsCard';
 import AccountsCard from './components/AccountsCard';
 import InstagramStatsGrid from './components/InstagramStatsGrid';
@@ -17,11 +20,64 @@ import { createClient } from '@supabase/supabase-js';
 import { fetchInstagramDailyAgg } from './lib/fetchInstagramDailyAgg';
 import InstagramWeeklyStats from './components/InstagramWeeklyStats';
 import TikTokWeeklyStats from './components/TikTokWeeklyStats';
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+import timezone from 'dayjs/plugin/timezone';
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
+
+// Filter data based on date range
+function filterDataByDateRange(data: any[], startDate: string, endDate: string): any[] {
+  if (!startDate || !endDate) return data;
+  
+  const start = dayjs(startDate).tz('America/New_York');
+  const end = dayjs(endDate).tz('America/New_York');
+  
+  return data.filter(row => {
+    const rowDate = dayjs(row.day || row.date).tz('America/New_York');
+    return rowDate.isAfter(start.subtract(1, 'day')) && rowDate.isBefore(end.add(1, 'day'));
+  });
+}
+
+// Format date range for display
+function formatDateRangeForDisplay(startDate: string, endDate: string, period: string): string {
+  if (!startDate || !endDate) return 'All Time';
+  
+  const start = dayjs(startDate);
+  const end = dayjs(endDate);
+  
+  switch (period) {
+    case 'today':
+      return 'Today';
+    case 'yesterday':
+      return 'Yesterday';
+    case 'this_week':
+      return 'This Week';
+    case 'this_month':
+      return 'This Month';
+    case 'this_year':
+      return 'This Year';
+    case 'custom_range':
+      if (start.isSame(end, 'day')) {
+        return start.format('MMM D, YYYY');
+      }
+      if (start.isSame(end, 'year')) {
+        return `${start.format('MMM D')} - ${end.format('MMM D, YYYY')}`;
+      }
+      return `${start.format('MMM D, YYYY')} - ${end.format('MMM D, YYYY')}`;
+    case 'custom_single':
+      return start.format('MMM D, YYYY');
+    case 'all':
+    default:
+      return 'All Time';
+  }
+}
 
 export default function Page() {
   const [selectedPlatform, setSelectedPlatform] = useState<Platform>('tiktok');
@@ -33,6 +89,13 @@ export default function Page() {
   const [tiktokError, setTiktokError] = useState<string | null>(null);
   const [instagramError, setInstagramError] = useState<string | null>(null);
   const [instagramUniqueAccounts, setInstagramUniqueAccounts] = useState<number>(0);
+  
+  // Global date range state
+  const [dateRange, setDateRange] = useState<DateRange>({
+    startDate: '2025-07-07',
+    endDate: dayjs().tz('America/New_York').format('YYYY-MM-DD'),
+    period: 'all'
+  });
 
   async function fetchAll() {
     setLoading(true);
@@ -112,6 +175,16 @@ export default function Page() {
     ? 'Your daily TikTok performance at a glance' 
     : 'Your daily Instagram performance at a glance';
 
+  // Filter data based on current date range
+  const filteredData = filterDataByDateRange(currentData, dateRange.startDate, dateRange.endDate);
+
+  const handleDateRangeChange = (newDateRange: DateRange) => {
+    setDateRange(newDateRange);
+  };
+
+  // Format the date range for display
+  const dateRangeText = formatDateRangeForDisplay(dateRange.startDate, dateRange.endDate, dateRange.period);
+
   return (
     <main className="min-h-screen bg-gradient-to-br from-[#18181b] to-[#23272f] flex flex-col items-center py-12 font-sans">
       <div className="w-full max-w-4xl">
@@ -128,46 +201,55 @@ export default function Page() {
           onPlatformChange={setSelectedPlatform} 
         />
         
-        <section className="mb-10">
-          <h3 className="text-lg font-semibold text-white mb-4">All Time Performance ({Math.floor((new Date().getTime() - new Date('2025-07-07').getTime()) / (1000 * 60 * 60 * 24))} days since Jul 7)</h3>
+        {/* Total Views Over Time Chart - Top of page */}
+        <section className="mb-6">
           {loading ? (
             <div className="text-slate-300 py-8 text-center">Loading...</div>
           ) : currentError ? (
             <div className="text-red-400 py-8 text-center">{currentError}</div>
           ) : selectedPlatform === 'tiktok' ? (
-            <StatsGrid data={currentData} uniqueAccounts={currentAccounts.length} />
+            <TotalViewsChart data={currentData} />
           ) : (
-            <InstagramStatsGrid data={currentData} uniqueAccounts={instagramUniqueAccounts} />
+            <InstagramTotalViewsChart data={currentData} />
+          )}
+        </section>
+
+        {/* Date Range Selector */}
+        <section className="mb-10">
+          <DateRangeSelector 
+            onDateRangeChange={handleDateRangeChange}
+            currentRange={dateRange}
+          />
+        </section>
+        
+        {/* Account Performance - Single section with dynamic date range */}
+        <section className="mb-10">
+          <h3 className="text-lg font-semibold text-white mb-4">Account Performance ({dateRangeText})</h3>
+          {loading ? (
+            <div className="text-slate-300 py-8 text-center">Loading...</div>
+          ) : currentError ? (
+            <div className="text-red-400 py-8 text-center">{currentError}</div>
+          ) : selectedPlatform === 'tiktok' ? (
+            <StatsGrid data={filteredData} uniqueAccounts={currentAccounts.length} />
+          ) : (
+            <InstagramStatsGrid data={filteredData} uniqueAccounts={instagramUniqueAccounts} />
           )}
         </section>
         
-        {/* Weekly Stats Section */}
-        <section className="mb-10">
+        {/* Daily Views Gained and Daily Posts Charts */}
+        <section className="backdrop-blur-md bg-white/5 border border-white/10 rounded-2xl shadow-xl p-6 mb-10">
           {loading ? (
             <div className="text-slate-300 py-8 text-center">Loading...</div>
           ) : currentError ? (
             <div className="text-red-400 py-8 text-center">{currentError}</div>
           ) : selectedPlatform === 'tiktok' ? (
-            <WeeklyStatsGrid data={currentData} uniqueAccounts={currentAccounts.length} />
+            <ViewsChart data={filteredData} />
           ) : (
-            <InstagramWeeklyStatsGrid data={currentData} uniqueAccounts={instagramUniqueAccounts} />
+            <InstagramViewsChart data={filteredData} />
           )}
         </section>
         
-        <section className="backdrop-blur-md bg-white/5 border border-white/10 rounded-2xl shadow-xl p-6">
-          <h2 className="text-xl font-semibold text-white mb-4">
-            {selectedPlatform === 'tiktok' ? 'Total Views Over Time' : 'Performance Over Time'}
-          </h2>
-          {loading ? (
-            <div className="text-slate-300 py-8 text-center">Loading...</div>
-          ) : currentError ? (
-            <div className="text-red-400 py-8 text-center">{currentError}</div>
-          ) : selectedPlatform === 'tiktok' ? (
-            <ViewsChart data={currentData} />
-          ) : (
-            <InstagramViewsChart data={currentData} />
-          )}
-        </section>
+        {/* Weekly Statistics - Always use unfiltered data */}
         {selectedPlatform === 'tiktok' && (
           <TikTokWeeklyStats data={currentData} />
         )}
@@ -175,8 +257,10 @@ export default function Page() {
           <InstagramWeeklyStats data={currentData} />
         )}
         
+        {/* Top Posts - Always use unfiltered data */}
         {selectedPlatform === 'tiktok' ? <TopPostsCard /> : <InstagramTopPostsCard />}
         
+        {/* Accounts - Always use unfiltered data */}
         {loading ? (
           <div className="text-slate-300 py-8 text-center">Loading...</div>
         ) : currentError ? (
