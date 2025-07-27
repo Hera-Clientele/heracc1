@@ -97,6 +97,32 @@ export default function Page() {
     period: 'all'
   });
 
+  // State for filtered account count
+  const [filteredAccountCount, setFilteredAccountCount] = useState<number>(0);
+  const [loadingAccountCount, setLoadingAccountCount] = useState(false);
+
+  // Function to fetch account count for date range
+  const fetchAccountCountForDateRange = async (startDate: string, endDate: string, platform: string) => {
+    setLoadingAccountCount(true);
+    try {
+      const response = await fetch(`/api/accounts-by-date?startDate=${startDate}&endDate=${endDate}&platform=${platform}`);
+      if (response.ok) {
+        const data = await response.json();
+        setFilteredAccountCount(data.uniqueAccounts);
+      } else {
+        console.error('Failed to fetch account count');
+        // Fallback to original count
+        setFilteredAccountCount(platform === 'tiktok' ? tiktokAccounts.length : instagramUniqueAccounts);
+      }
+    } catch (error) {
+      console.error('Error fetching account count:', error);
+      // Fallback to original count
+      setFilteredAccountCount(platform === 'tiktok' ? tiktokAccounts.length : instagramUniqueAccounts);
+    } finally {
+      setLoadingAccountCount(false);
+    }
+  };
+
   async function fetchAll() {
     setLoading(true);
     setTiktokError(null);
@@ -166,6 +192,13 @@ export default function Page() {
     };
   }, []);
 
+  // Fetch account count when date range changes
+  useEffect(() => {
+    if (dateRange.startDate && dateRange.endDate) {
+      fetchAccountCountForDateRange(dateRange.startDate, dateRange.endDate, selectedPlatform);
+    }
+  }, [dateRange, selectedPlatform]);
+
   const currentData = selectedPlatform === 'tiktok' ? tiktokData : instagramData;
   const currentAccounts = selectedPlatform === 'tiktok' ? tiktokAccounts : instagramAccounts;
   const currentError = selectedPlatform === 'tiktok' ? tiktokError : instagramError;
@@ -230,9 +263,9 @@ export default function Page() {
           ) : currentError ? (
             <div className="text-red-400 py-8 text-center">{currentError}</div>
           ) : selectedPlatform === 'tiktok' ? (
-            <StatsGrid data={filteredData} uniqueAccounts={currentAccounts.length} />
+            <StatsGrid data={filteredData} uniqueAccounts={loadingAccountCount ? 0 : filteredAccountCount} />
           ) : (
-            <InstagramStatsGrid data={filteredData} uniqueAccounts={instagramUniqueAccounts} />
+            <InstagramStatsGrid data={filteredData} uniqueAccounts={loadingAccountCount ? 0 : filteredAccountCount} />
           )}
         </section>
         
