@@ -15,16 +15,29 @@ const supabase = createClient(
 );
 
 export async function fetchAccountsWithViews(): Promise<AccountWithViews[]> {
+  // Get all data from latest_snapshots
   const { data, error } = await supabase
     .from('latest_snapshots')
     .select('username, profile_url, views, video_id, followers')
-    .order('username', { ascending: true });
+    .order('views', { ascending: false }); // Sort by views descending to get highest first
+  
   if (error) throw error;
-  // Aggregate highest view post, post count, and followers by username/profile_url
-  const accountMap: Record<string, { username: string; profile_url: string; highest_view_post: number; videoIds: Set<string>; followers: number }> = {};
+  
+  // Aggregate data by username/profile_url combination
+  const accountMap: Record<string, { 
+    username: string; 
+    profile_url: string; 
+    highest_view_post: number; 
+    videoIds: Set<string>; 
+    followers: number; 
+    totalViews: number;
+    posts: Array<{views: number, video_id: string}>;
+  }> = {};
+  
   for (const row of data || []) {
     if (!row.username || !row.profile_url) continue;
     const key = row.username + '|' + row.profile_url;
+    
     if (!accountMap[key]) {
       accountMap[key] = {
         username: row.username,
@@ -32,16 +45,32 @@ export async function fetchAccountsWithViews(): Promise<AccountWithViews[]> {
         highest_view_post: 0,
         videoIds: new Set(),
         followers: 0,
+        totalViews: 0,
+        posts: [],
       };
     }
+    
+    // Track all posts for this account
+    if (row.video_id) {
+      accountMap[key].videoIds.add(row.video_id.toString());
+      if (row.views) {
+        accountMap[key].posts.push({ views: row.views, video_id: row.video_id.toString() });
+        accountMap[key].totalViews += row.views;
+      }
+    }
+    
+    // Update highest view post if this post has more views
     if (row.views && row.views > accountMap[key].highest_view_post) {
       accountMap[key].highest_view_post = row.views;
     }
-    if (row.video_id) accountMap[key].videoIds.add(row.video_id.toString());
+    
+    // Update followers if this record has more followers
     if (row.followers && row.followers > accountMap[key].followers) {
       accountMap[key].followers = row.followers;
     }
   }
+  
+  // Convert to final format and sort by highest view post
   return Object.values(accountMap)
     .map(acc => {
       const post_count = acc.videoIds.size;
@@ -50,7 +79,7 @@ export async function fetchAccountsWithViews(): Promise<AccountWithViews[]> {
         profile_url: acc.profile_url,
         highest_view_post: acc.highest_view_post,
         post_count,
-        average_views: post_count > 0 ? Math.floor(acc.highest_view_post / post_count) : 0, // You may want to update this logic if needed
+        average_views: post_count > 0 ? Math.floor(acc.totalViews / post_count) : 0,
         followers: acc.followers,
       };
     })
