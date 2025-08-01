@@ -1,6 +1,6 @@
 # Multi-Platform Social Media Dashboard
 
-A modern, real-time dashboard for monitoring TikTok and Instagram performance metrics
+A modern, real-time dashboard for monitoring TikTok and Instagram performance analytics.
 
 ## Features
 
