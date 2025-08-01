@@ -205,8 +205,8 @@ export default function Page() {
   const platformName = selectedPlatform === 'tiktok' ? 'TikTok' : 'Instagram';
   const platformLogo = selectedPlatform === 'tiktok' ? '/tiktok-1.svg' : '/ig.svg';
   const platformDescription = selectedPlatform === 'tiktok' 
-    ? 'Your daily TikTok performance at a glance' 
-    : 'Your daily Instagram performance at a glance';
+    ? 'Your daily TikTok performance in one glance.' 
+    : 'Your daily Instagram performance in one glance.';
 
   // Filter data based on current date range
   const filteredData = filterDataByDateRange(currentData, dateRange.startDate, dateRange.endDate);
