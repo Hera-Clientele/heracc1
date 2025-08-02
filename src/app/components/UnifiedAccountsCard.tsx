@@ -1,49 +1,39 @@
 "use client";
 import React, { useEffect, useState } from 'react';
+import type { AccountWithViews } from '../lib/fetchAccountsWithViews';
 
-interface InstagramAccount {
-  username: string;
-  profile_url: string;
-  views: number;
-  likes: number;
-  comments: number;
-  posts: number;
-  highest_view_post: number;
-  avg_views: number;
-  followers?: number;
-  display_name?: string;
-  bio?: string;
-  account_niche?: string;
-  pfp_url?: string;
-  account_status?: string;
-  last_updated?: string;
+interface UnifiedAccountsCardProps {
+  platform: 'tiktok' | 'instagram';
 }
 
-export default function InstagramAccountsCard() {
-  const [accounts, setAccounts] = useState<InstagramAccount[]>([]);
+export default function UnifiedAccountsCard({ platform }: UnifiedAccountsCardProps) {
+  const [accounts, setAccounts] = useState<AccountWithViews[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchAccounts() {
       try {
-        const res = await fetch('/api/accounts?platform=instagram', { cache: 'no-store' });
-        if (!res.ok) throw new Error('Failed to fetch Instagram accounts');
+        const res = await fetch(`/api/accounts?platform=${platform}`, { cache: 'no-store' });
+        if (!res.ok) throw new Error(`Failed to fetch ${platform} accounts`);
         const data = await res.json();
         setAccounts(data.accounts || []);
+        
+        // Debug: Log status values
+        console.log(`${platform} accounts status values:`, data.accounts?.map((acc: any) => acc.account_status));
       } catch (err: any) {
-        setError(err.message || 'Error fetching Instagram accounts');
+        setError(err.message || `Error fetching ${platform} accounts`);
       } finally {
         setLoading(false);
       }
     }
     fetchAccounts();
-  }, []);
+  }, [platform]);
 
   if (loading) {
     return (
       <div className="backdrop-blur-md bg-white/5 border border-white/10 rounded-2xl shadow-xl p-6 mt-6">
-        <h2 className="text-xl font-semibold text-white mb-4">Instagram Accounts</h2>
+        <h2 className="text-xl font-semibold text-white mb-4">{platform.charAt(0).toUpperCase() + platform.slice(1)} Accounts</h2>
         <div className="text-slate-300 py-8 text-center">Loading...</div>
       </div>
     );
@@ -52,15 +42,18 @@ export default function InstagramAccountsCard() {
   if (error) {
     return (
       <div className="backdrop-blur-md bg-white/5 border border-white/10 rounded-2xl shadow-xl p-6 mt-6">
-        <h2 className="text-xl font-semibold text-white mb-4">Instagram Accounts</h2>
+        <h2 className="text-xl font-semibold text-white mb-4">{platform.charAt(0).toUpperCase() + platform.slice(1)} Accounts</h2>
         <div className="text-red-400 py-8 text-center">{error}</div>
       </div>
     );
   }
 
+  // Sort accounts by average_views descending
+  const sortedAccounts = [...accounts].sort((a, b) => b.average_views - a.average_views);
+
   return (
     <div className="backdrop-blur-md bg-white/5 border border-white/10 rounded-2xl shadow-xl p-6 mt-6">
-      <h2 className="text-xl font-semibold text-white mb-4">Instagram Accounts</h2>
+      <h2 className="text-xl font-semibold text-white mb-4">{platform.charAt(0).toUpperCase() + platform.slice(1)} Accounts</h2>
       <div className="overflow-x-auto max-h-[64rem] overflow-y-auto scrollbar-hide">
         <table className="min-w-full text-white">
           <thead className="sticky top-0 bg-[#18181b] border-b border-slate-700 z-10">
@@ -74,8 +67,8 @@ export default function InstagramAccountsCard() {
             </tr>
           </thead>
           <tbody>
-            {accounts.map((account) => (
-              <tr key={account.username} className="hover:bg-slate-800/40 transition">
+            {sortedAccounts.map((account) => (
+              <tr key={account.username + account.profile_url} className="hover:bg-slate-800/40 transition">
                 <td className="px-4 py-2 font-mono max-w-xs">
                   <div className="flex items-center gap-3 min-w-0">
                     {account.pfp_url && (
@@ -93,6 +86,9 @@ export default function InstagramAccountsCard() {
                         {account.display_name || account.username}
                       </a>
                       <div className="text-xs text-slate-400 truncate">@{account.username}</div>
+                      {account.account_niche && (
+                        <div className="text-xs text-slate-500 truncate">{account.account_niche}</div>
+                      )}
                     </div>
                   </div>
                 </td>
@@ -107,10 +103,10 @@ export default function InstagramAccountsCard() {
                     {account.account_status || 'unknown'}
                   </span>
                 </td>
-                <td className="px-4 py-2 text-center">{account.followers?.toLocaleString() || 'N/A'}</td>
-                <td className="px-4 py-2 text-center">{account.views.toLocaleString()}</td>
-                <td className="px-4 py-2 text-center">{account.posts}</td>
-                <td className="px-4 py-2 text-center">{account.avg_views.toLocaleString()}</td>
+                <td className="px-4 py-2 text-center">{account.followers.toLocaleString()}</td>
+                <td className="px-4 py-2 text-center">{account.views_count_total?.toLocaleString() || 'N/A'}</td>
+                <td className="px-4 py-2 text-center">{account.post_count}</td>
+                <td className="px-4 py-2 text-center">{account.average_views.toLocaleString()}</td>
               </tr>
             ))}
           </tbody>

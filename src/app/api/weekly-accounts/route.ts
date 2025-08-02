@@ -1,5 +1,5 @@
-import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { NextResponse } from 'next/server';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -8,23 +8,18 @@ const supabase = createClient(
 
 export async function GET() {
   try {
-    // Query the weekly unique accounts view
     const { data, error } = await supabase
-      .from('v_weekly_unique_accounts')
-      .select('*')
-      .single();
+      .from('accounts')
+      .select('username')
+      .eq('platform', 'tiktok')
+      .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
+      .not('username', 'is', null);
 
     if (error) throw error;
 
-    return NextResponse.json({ 
-      uniqueAccounts: data.unique_accounts_this_week || 0,
-      weekStart: data.week_start,
-      weekEnd: data.week_end
-    });
+    const uniqueUsernames = [...new Set(data.map(row => row.username))];
+    return NextResponse.json({ count: uniqueUsernames.length });
   } catch (error: any) {
-    return NextResponse.json(
-      { error: 'Failed to fetch weekly accounts data' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 } 

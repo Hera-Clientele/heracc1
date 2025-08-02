@@ -1,47 +1,41 @@
 import { createClient } from '@supabase/supabase-js';
-import { NextRequest, NextResponse } from 'next/server';
-import { fetchAccountsWithViews } from '../../lib/fetchAccountsWithViews';
+import { NextResponse } from 'next/server';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
-    // Get the processed accounts data
-    const accounts = await fetchAccountsWithViews();
-    
-    // Find softgirlkatiele specifically
-    const softgirlAccount = accounts.find(acc => acc.username === 'softgirlkatiele');
-    
-    // Get raw data for softgirlkatiele
-    const { data: rawData, error: rawError } = await supabase
-      .from('latest_snapshots')
-      .select('*')
-      .eq('username', 'softgirlkatiele')
-      .order('views', { ascending: false });
+    const { data, error } = await supabase
+      .from('accounts')
+      .select('username, account_status, platform')
+      .order('account_status', { ascending: true });
 
-    if (rawError) {
-      console.error('Raw data error:', rawError);
-    }
+    if (error) throw error;
 
-    return NextResponse.json({
-      success: true,
-      processedAccount: softgirlAccount,
-      rawData: rawData || [],
-      allAccountsCount: accounts.length,
-      top5Accounts: accounts.slice(0, 5).map(acc => ({
-        username: acc.username,
-        highest_view_post: acc.highest_view_post,
-        post_count: acc.post_count,
-        average_views: acc.average_views,
-        followers: acc.followers
-      }))
+    // Group by status to see what values exist
+    const statusCounts: Record<string, number> = {};
+    const statusExamples: Record<string, string[]> = {};
+    
+    data?.forEach(account => {
+      const status = account.account_status || 'null';
+      statusCounts[status] = (statusCounts[status] || 0) + 1;
+      if (!statusExamples[status]) statusExamples[status] = [];
+      if (statusExamples[status].length < 3) {
+        statusExamples[status].push(account.username);
+      }
     });
 
-  } catch (error) {
-    console.error('Debug API error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({
+      totalAccounts: data?.length || 0,
+      statusCounts,
+      statusExamples,
+      allStatuses: [...new Set(data?.map(a => a.account_status).filter(Boolean))],
+      sampleData: data?.slice(0, 5)
+    });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 } 

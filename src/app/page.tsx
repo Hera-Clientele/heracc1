@@ -13,6 +13,7 @@ import InstagramStatsGrid from './components/InstagramStatsGrid';
 import InstagramViewsChart from './components/InstagramViewsChart';
 import InstagramTopPostsCard from './components/InstagramTopPostsCard';
 import InstagramAccountsCard from './components/InstagramAccountsCard';
+import UnifiedAccountsCard from './components/UnifiedAccountsCard';
 import PlatformSelector, { Platform } from './components/PlatformSelector';
 import type { Row } from './lib/fetchDailyAgg';
 import type { AccountWithViews } from './lib/fetchAccountsWithViews';
@@ -128,10 +129,10 @@ export default function Page() {
     setTiktokError(null);
     setInstagramError(null);
     try {
-      // Always fetch TikTok data (original functionality)
+      // Fetch TikTok data using the new unified accounts API
       const [tiktokAggRes, tiktokAccRes] = await Promise.all([
         fetch('/api/daily-agg', { cache: 'no-store' }),
-        fetch('/api/accounts', { cache: 'no-store' })
+        fetch('/api/accounts?platform=tiktok', { cache: 'no-store' })
       ]);
       
       if (!tiktokAggRes.ok || !tiktokAccRes.ok) throw new Error('Failed to fetch TikTok dashboard data');
@@ -157,12 +158,12 @@ export default function Page() {
         setInstagramData([]);
       }
 
-      // Fetch unique Instagram accounts count from accounts API
+      // Fetch Instagram accounts using the new unified accounts API
       try {
-        const res = await fetch('/api/instagram/accounts', { cache: 'no-store' });
+        const res = await fetch('/api/accounts?platform=instagram', { cache: 'no-store' });
         if (res.ok) {
           const json = await res.json();
-          setInstagramUniqueAccounts(json.totalAccounts || 0);
+          setInstagramUniqueAccounts(json.accounts.length || 0);
         } else {
           setInstagramUniqueAccounts(0);
         }
@@ -182,7 +183,7 @@ export default function Page() {
     // Subscribe to real-time updates for all relevant tables/views
     const channels = [
       supabase.channel('realtime:daily_agg').on('postgres_changes', { event: '*', schema: 'public', table: 'daily_agg' }, fetchAll),
-      supabase.channel('realtime:latest_snapshots').on('postgres_changes', { event: '*', schema: 'public', table: 'latest_snapshots' }, fetchAll),
+      supabase.channel('realtime:accounts').on('postgres_changes', { event: '*', schema: 'public', table: 'accounts' }, fetchAll),
       supabase.channel('realtime:v_daily_video').on('postgres_changes', { event: '*', schema: 'public', table: 'v_daily_video' }, fetchAll),
       supabase.channel('realtime:v_daily_video_delta').on('postgres_changes', { event: '*', schema: 'public', table: 'v_daily_video_delta' }, fetchAll),
     ];
@@ -294,25 +295,9 @@ export default function Page() {
         {selectedPlatform === 'tiktok' ? <TopPostsCard /> : <InstagramTopPostsCard />}
         
         {/* Accounts - Always use unfiltered data */}
-        {loading ? (
-          <div className="text-slate-300 py-8 text-center">Loading...</div>
-        ) : currentError ? (
-          <div className="text-red-400 py-8 text-center">{currentError}</div>
-        ) : selectedPlatform === 'tiktok' ? (
-          <AccountsCard accounts={currentAccounts} />
-        ) : (
-          <InstagramAccountsCard />
-        )}
+        <UnifiedAccountsCard platform={selectedPlatform} />
       </div>
     </main>
   );
 }
 
-// Helper function to fetch unique Instagram accounts
-async function fetchInstagramUniqueAccounts() {
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-  return await supabase.from('v_latest_instagram').select('username').neq('username', null);
-}

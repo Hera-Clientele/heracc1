@@ -7,6 +7,19 @@ export interface AccountWithViews {
   post_count: number;
   average_views: number;
   followers: number;
+  platform: string;
+  display_name?: string;
+  bio?: string;
+  account_niche?: string;
+  pfp_url?: string;
+  account_status?: string;
+  views_count_total?: number;
+  likes_count_total?: number;
+  comments_count_total?: number;
+  shares_count_total?: number;
+  profile_views?: number;
+  reach_count?: number;
+  last_updated?: string;
 }
 
 const supabase = createClient(
@@ -14,74 +27,43 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-export async function fetchAccountsWithViews(): Promise<AccountWithViews[]> {
-  // Get all data from latest_snapshots
-  const { data, error } = await supabase
-    .from('latest_snapshots')
-    .select('username, profile_url, views, video_id, followers')
-    .order('views', { ascending: false }); // Sort by views descending to get highest first
+export async function fetchAccountsWithViews(platform?: 'tiktok' | 'instagram'): Promise<AccountWithViews[]> {
+  let query = supabase
+    .from('accounts')
+    .select('*')
+    .order('views_count_total', { ascending: false });
+
+  // Filter by platform if specified
+  if (platform) {
+    query = query.eq('platform', platform);
+  }
+
+  const { data, error } = await query;
   
   if (error) throw error;
   
-  // Aggregate data by username/profile_url combination
-  const accountMap: Record<string, { 
-    username: string; 
-    profile_url: string; 
-    highest_view_post: number; 
-    videoIds: Set<string>; 
-    followers: number; 
-    totalViews: number;
-    posts: Array<{views: number, video_id: string}>;
-  }> = {};
-  
-  for (const row of data || []) {
-    if (!row.username || !row.profile_url) continue;
-    const key = row.username + '|' + row.profile_url;
-    
-    if (!accountMap[key]) {
-      accountMap[key] = {
-        username: row.username,
-        profile_url: row.profile_url,
-        highest_view_post: 0,
-        videoIds: new Set(),
-        followers: 0,
-        totalViews: 0,
-        posts: [],
-      };
-    }
-    
-    // Track all posts for this account
-    if (row.video_id) {
-      accountMap[key].videoIds.add(row.video_id.toString());
-      if (row.views) {
-        accountMap[key].posts.push({ views: row.views, video_id: row.video_id.toString() });
-        accountMap[key].totalViews += row.views;
-      }
-    }
-    
-    // Update highest view post if this post has more views
-    if (row.views && row.views > accountMap[key].highest_view_post) {
-      accountMap[key].highest_view_post = row.views;
-    }
-    
-    // Update followers if this record has more followers
-    if (row.followers && row.followers > accountMap[key].followers) {
-      accountMap[key].followers = row.followers;
-    }
-  }
-  
-  // Convert to final format and sort by highest view post
-  return Object.values(accountMap)
-    .map(acc => {
-      const post_count = acc.videoIds.size;
-      return {
-        username: acc.username,
-        profile_url: acc.profile_url,
-        highest_view_post: acc.highest_view_post,
-        post_count,
-        average_views: post_count > 0 ? Math.floor(acc.totalViews / post_count) : 0,
-        followers: acc.followers,
-      };
-    })
-    .sort((a, b) => b.highest_view_post - a.highest_view_post);
+  // Transform the data to match the expected interface
+  return (data || []).map(account => ({
+    username: account.username,
+    profile_url: account.profile_url || '',
+    highest_view_post: account.views_count_total || 0,
+    post_count: account.media_count || 0,
+    average_views: account.media_count && account.views_count_total 
+      ? Math.floor(account.views_count_total / account.media_count) 
+      : 0,
+    followers: account.followers_count || 0,
+    platform: account.platform,
+    display_name: account.display_name,
+    bio: account.bio,
+    account_niche: account.account_niche,
+    pfp_url: account.pfp_url,
+    account_status: account.account_status,
+    views_count_total: account.views_count_total,
+    likes_count_total: account.likes_count_total,
+    comments_count_total: account.comments_count_total,
+    shares_count_total: account.shares_count_total,
+    profile_views: account.profile_views,
+    reach_count: account.reach_count,
+    last_updated: account.last_updated,
+  }));
 } 

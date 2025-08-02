@@ -17,27 +17,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Start date and end date are required' }, { status: 400 });
     }
 
-    let query;
-    
-    if (platform === 'tiktok') {
-      // Query for TikTok accounts within the date range
-      query = supabase
-        .from('latest_snapshots')
-        .select('username')
-        .gte('created_at', `${startDate}T00:00:00`)
-        .lte('created_at', `${endDate}T23:59:59`)
-        .not('username', 'is', null);
-    } else {
-      // Query for Instagram accounts within the date range
-      query = supabase
-        .from('v_latest_instagram')
-        .select('username')
-        .gte('created_at', `${startDate}T00:00:00`)
-        .lte('created_at', `${endDate}T23:59:59`)
-        .not('username', 'is', null);
-    }
-
-    const { data, error } = await query;
+    // Query the accounts table for accounts created within the date range
+    const { data, error } = await supabase
+      .from('accounts')
+      .select('username')
+      .eq('platform', platform)
+      .gte('created_at', `${startDate}T00:00:00`)
+      .lte('created_at', `${endDate}T23:59:59`)
+      .not('username', 'is', null);
 
     if (error) {
       console.error('Supabase error:', error);
