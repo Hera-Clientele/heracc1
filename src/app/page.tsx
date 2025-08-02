@@ -245,9 +245,9 @@ export default function Page() {
         <header className="mb-8 flex flex-col items-center">
           <div className="flex items-center justify-between w-full mb-4">
             <div className="flex items-center gap-3">
-              <img src={platformLogo} alt={`${platformName} Logo`} className="h-10 w-10" />
+              <img src="/hera.png" alt="Hera Logo" className="h-10 w-10" />
               <h1 className="text-4xl font-extrabold text-white tracking-tight drop-shadow">
-                {platformName} Dashboard
+                Hera Dashboard
               </h1>
             </div>
             <div className="text-right">

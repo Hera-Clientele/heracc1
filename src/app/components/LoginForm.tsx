@@ -44,8 +44,10 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
       <div className="w-full max-w-md">
         <div className="backdrop-blur-md bg-white/5 border border-white/10 rounded-2xl shadow-xl p-8">
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-white mb-2">Client Dashboard</h1>
-            <p className="text-slate-400">Enter your credentials to access your data</p>
+            <div className="flex items-center justify-center gap-3 mb-4">
+              <img src="/hera.png" alt="Hera Logo" className="h-12 w-12" />
+              <h1 className="text-3xl font-bold text-white">Hera Dashboard</h1>
+            </div>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
