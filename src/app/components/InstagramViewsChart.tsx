@@ -28,34 +28,23 @@ interface InstagramRow {
   engagement_rate: number;
 }
 
-// Utility function to calculate next update time
+// Utility function to calculate next update time (every hour)
 function getNextUpdateTime() {
   const now = dayjs().tz('America/New_York');
-  const updateTime = { hour: 19, minute: 55 }; // 7:55 PM EST
-
-  // Find the next update time
-  const nextUpdate = now.hour(updateTime.hour).minute(updateTime.minute).second(0).millisecond(0);
-  if (nextUpdate.isAfter(now)) {
-    return nextUpdate;
-  }
-
-  // If the time has passed today, return tomorrow at 7:55 PM
-  return now.add(1, 'day').hour(updateTime.hour).minute(updateTime.minute).second(0).millisecond(0);
+  
+  // Get the next hour (current hour + 1, with minutes and seconds set to 0)
+  const nextUpdate = now.add(1, 'hour').minute(0).second(0).millisecond(0);
+  
+  return nextUpdate;
 }
 
-// Utility function to get last update time (assuming it's the most recent update time before now)
+// Utility function to get last update time (every hour)
 function getLastUpdateTime() {
   const now = dayjs().tz('America/New_York');
-  const updateTime = { hour: 19, minute: 55 }; // 7:55 PM EST
-
-  // Find the most recent update time
-  const lastUpdate = now.hour(updateTime.hour).minute(updateTime.minute).second(0).millisecond(0);
   
-  // If the update time hasn't occurred today yet, return yesterday's update time
-  if (lastUpdate.isAfter(now)) {
-    return now.subtract(1, 'day').hour(updateTime.hour).minute(updateTime.minute).second(0).millisecond(0);
-  }
-
+  // Get the current hour with minutes and seconds set to 0
+  const lastUpdate = now.minute(0).second(0).millisecond(0);
+  
   return lastUpdate;
 }
 

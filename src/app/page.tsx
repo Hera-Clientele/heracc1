@@ -255,7 +255,6 @@ export default function Page() {
               {clientModel && <p className="text-slate-400 text-sm">Model: {clientModel}</p>}
             </div>
           </div>
-          <p className="text-slate-400 text-lg">{platformDescription}</p>
         </header>
         
         <PlatformSelector 
