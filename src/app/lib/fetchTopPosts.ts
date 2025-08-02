@@ -47,20 +47,46 @@ function getDateRange(period: 'today' | 'yesterday' | '3days' | '7days' | 'month
   return { from: from ? from.toISOString() : null, to: to ? to.toISOString() : null };
 }
 
-export async function fetchTopPosts(period: 'today' | 'yesterday' | '3days' | '7days' | 'month' | 'all' = 'all'): Promise<TopPost[]> {
+export async function fetchTopPosts(period: 'today' | 'yesterday' | '3days' | '7days' | 'month' | 'all' = 'all', clientId?: string): Promise<TopPost[]> {
   const { from, to } = getDateRange(period);
 
-  let params: any = { period_start: from, limit_count: 10 };
-  if (to) params.period_end = to;
+  // Use direct query instead of RPC function for debugging
+  let query = supabase
+    .from('latest_snapshots')
+    .select('video_id, username, url, views, post_caption, snapshot_date, created_at, client_id')
+    .order('views', { ascending: false })
+    .limit(10);
 
-  // For 'all', just use a very early start date
-  if (period === 'all') {
-    params.period_start = '1970-01-01T00:00:00Z';
-    params.period_end = null;
+  // First, let's test without any filters to see if we can get any data
+  console.log('Testing query without filters first...');
+  const { data: allData, error: allError } = await supabase
+    .from('latest_snapshots')
+    .select('video_id, username, client_id')
+    .limit(5);
+  
+  console.log('All data test:', { count: allData?.length || 0, error: allError, sample: allData?.[0] });
+
+  // Filter by client_id
+  if (clientId) {
+    query = query.eq('client_id', parseInt(clientId, 10));
   }
 
-  const { data, error } = await supabase.rpc('get_top_posts', params);
+  // Filter by date range if specified
+  if (period !== 'all' && from && to) {
+    query = query.gte('created_at', from).lt('created_at', to);
+  }
 
-  if (error) throw error;
+  console.log('fetchTopPosts query params:', { period, clientId, from, to }); // Debug log
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error('fetchTopPosts error:', error);
+    throw error;
+  }
+  
+  console.log('fetchTopPosts result:', data?.length || 0, 'posts found'); // Debug log
+  console.log('fetchTopPosts first post:', data?.[0]); // Debug log
+  
   return data || [];
 } 

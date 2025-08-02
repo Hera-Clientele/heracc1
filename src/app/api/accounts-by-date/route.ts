@@ -12,9 +12,14 @@ export async function GET(request: NextRequest) {
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
     const platform = searchParams.get('platform') || 'tiktok';
+    const clientId = searchParams.get('clientId');
 
     if (!startDate || !endDate) {
       return NextResponse.json({ error: 'Start date and end date are required' }, { status: 400 });
+    }
+
+    if (!clientId) {
+      return NextResponse.json({ error: 'Client ID is required' }, { status: 400 });
     }
 
     // Query the accounts table for accounts created within the date range
@@ -22,6 +27,7 @@ export async function GET(request: NextRequest) {
       .from('accounts')
       .select('username')
       .eq('platform', platform)
+      .eq('client_id', clientId)
       .gte('created_at', `${startDate}T00:00:00`)
       .lte('created_at', `${endDate}T23:59:59`)
       .not('username', 'is', null);

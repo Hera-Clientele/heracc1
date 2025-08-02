@@ -25,7 +25,11 @@ interface InstagramPost {
   post_caption: string;
 }
 
-export default function InstagramTopPostsCard() {
+interface InstagramTopPostsCardProps {
+  clientId: string;
+}
+
+export default function InstagramTopPostsCard({ clientId }: InstagramTopPostsCardProps) {
   const [period, setPeriod] = useState<'today' | 'yesterday' | '3days' | '7days' | 'month' | 'all'>('today');
   const [posts, setPosts] = useState<InstagramPost[]>([]);
   const [loading, setLoading] = useState(false);
@@ -36,7 +40,7 @@ export default function InstagramTopPostsCard() {
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch(`/api/instagram/top-posts?period=${period}`, { cache: 'no-store' });
+        const res = await fetch(`/api/instagram/top-posts?period=${period}&clientId=${clientId}`, { cache: 'no-store' });
         if (!res.ok) throw new Error('Failed to fetch');
         const data = await res.json();
         setPosts(data.posts);
@@ -47,7 +51,7 @@ export default function InstagramTopPostsCard() {
       }
     }
     fetchData();
-  }, [period]);
+  }, [period, clientId]);
 
   return (
     <div className="backdrop-blur-md bg-white/5 border border-white/10 rounded-2xl shadow-xl p-6 mt-8">

@@ -10,11 +10,14 @@ dayjs.extend(timezone);
 dayjs.extend(isoWeek);
 
 interface InstagramRow {
-  date: string;
-  total_views: number | string;
-  total_likes: number | string;
-  total_comments: number | string;
-  videos_scraped: number | string;
+  day: string;
+  posts: number;
+  accounts: number;
+  views: number;
+  likes: number;
+  comments: number;
+  shares: number;
+  engagement_rate: number;
 }
 
 interface InstagramWeeklyStatsGridProps {
@@ -48,14 +51,14 @@ export default function InstagramWeeklyStatsGrid({ data, uniqueAccounts }: Insta
   // Group data by week number and get current week data
   const weeks: Record<string, any[]> = {};
   for (const row of data) {
-    const week = dayjs(row.date).tz('America/New_York').isoWeek();
+    const week = dayjs(row.day).tz('America/New_York').isoWeek();
     if (!weeks[week]) weeks[week] = [];
     weeks[week].push({
-      date: row.date,
-      total_views: Number(row.total_views),
-      total_likes: Number(row.total_likes),
-      total_comments: Number(row.total_comments),
-      videos_scraped: Number(row.videos_scraped),
+      date: row.day,
+      total_views: Number(row.views),
+      total_likes: Number(row.likes),
+      total_comments: Number(row.comments),
+      videos_scraped: Number(row.posts),
     });
   }
 

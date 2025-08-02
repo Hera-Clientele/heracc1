@@ -1,11 +1,14 @@
 import React from 'react';
 
 interface InstagramRow {
-  date: string;
-  total_views: number;
-  total_likes: number;
-  total_comments: number;
-  videos_scraped: number;
+  day: string;
+  posts: number;
+  accounts: number;
+  views: number;
+  likes: number;
+  comments: number;
+  shares: number;
+  engagement_rate: number;
 }
 
 interface InstagramStatsGridProps {
@@ -19,10 +22,10 @@ function sum(arr: number[]) {
 
 export default function InstagramStatsGrid({ data, uniqueAccounts }: InstagramStatsGridProps) {
   const totals = {
-    views: sum(data.map((r) => r.total_views)),
-    likes: sum(data.map((r) => r.total_likes)),
-    comments: sum(data.map((r) => r.total_comments)),
-    posts: sum(data.map((r) => r.videos_scraped)),
+    views: sum(data.map((r) => r.views)),
+    likes: sum(data.map((r) => r.likes)),
+    comments: sum(data.map((r) => r.comments)),
+    posts: sum(data.map((r) => r.posts)),
     accounts: uniqueAccounts || 0,
   };
   const engagement = totals.views === 0 ? 0 : ((totals.likes + totals.comments) / totals.views) * 100;

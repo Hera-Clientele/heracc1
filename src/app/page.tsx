@@ -15,6 +15,7 @@ import InstagramTopPostsCard from './components/InstagramTopPostsCard';
 import InstagramAccountsCard from './components/InstagramAccountsCard';
 import UnifiedAccountsCard from './components/UnifiedAccountsCard';
 import PlatformSelector, { Platform } from './components/PlatformSelector';
+import LoginForm from './components/LoginForm';
 import type { Row } from './lib/fetchDailyAgg';
 import type { AccountWithViews } from './lib/fetchAccountsWithViews';
 import { createClient } from '@supabase/supabase-js';
@@ -81,6 +82,9 @@ function formatDateRangeForDisplay(startDate: string, endDate: string, period: s
 }
 
 export default function Page() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [clientId, setClientId] = useState<string>('');
+  const [clientModel, setClientModel] = useState<string>('');
   const [selectedPlatform, setSelectedPlatform] = useState<Platform>('tiktok');
   const [tiktokData, setTiktokData] = useState<Row[]>([]);
   const [tiktokAccounts, setTiktokAccounts] = useState<AccountWithViews[]>([]);
@@ -106,7 +110,7 @@ export default function Page() {
   const fetchAccountCountForDateRange = async (startDate: string, endDate: string, platform: string) => {
     setLoadingAccountCount(true);
     try {
-      const response = await fetch(`/api/accounts-by-date?startDate=${startDate}&endDate=${endDate}&platform=${platform}`);
+      const response = await fetch(`/api/accounts-by-date?startDate=${startDate}&endDate=${endDate}&platform=${platform}&clientId=${clientId}`);
       if (response.ok) {
         const data = await response.json();
         setFilteredAccountCount(data.uniqueAccounts);
@@ -124,15 +128,24 @@ export default function Page() {
     }
   };
 
+  // Handle login
+  const handleLogin = (clientId: string, model: string) => {
+    setClientId(clientId);
+    setClientModel(model);
+    setIsAuthenticated(true);
+  };
+
   async function fetchAll() {
+    if (!isAuthenticated || !clientId) return;
+    
     setLoading(true);
     setTiktokError(null);
     setInstagramError(null);
     try {
       // Fetch TikTok data using the new unified accounts API
       const [tiktokAggRes, tiktokAccRes] = await Promise.all([
-        fetch('/api/daily-agg', { cache: 'no-store' }),
-        fetch('/api/accounts?platform=tiktok', { cache: 'no-store' })
+        fetch(`/api/daily-agg?clientId=${clientId}`, { cache: 'no-store' }),
+        fetch(`/api/accounts?platform=tiktok&clientId=${clientId}`, { cache: 'no-store' })
       ]);
       
       if (!tiktokAggRes.ok || !tiktokAccRes.ok) throw new Error('Failed to fetch TikTok dashboard data');
@@ -146,7 +159,7 @@ export default function Page() {
       // Fetch Instagram daily aggregates
       let instagramAggData: any[] = [];
       try {
-        const res = await fetch('/api/instagram/daily-agg', { cache: 'no-store' });
+        const res = await fetch(`/api/instagram/daily-agg?clientId=${clientId}`, { cache: 'no-store' });
         if (res.ok) {
           const json = await res.json();
           instagramAggData = json.data || [];
@@ -160,7 +173,7 @@ export default function Page() {
 
       // Fetch Instagram accounts using the new unified accounts API
       try {
-        const res = await fetch('/api/accounts?platform=instagram', { cache: 'no-store' });
+        const res = await fetch(`/api/accounts?platform=instagram&clientId=${clientId}`, { cache: 'no-store' });
         if (res.ok) {
           const json = await res.json();
           setInstagramUniqueAccounts(json.accounts.length || 0);
@@ -179,26 +192,28 @@ export default function Page() {
   }
 
   useEffect(() => {
-    fetchAll();
-    // Subscribe to real-time updates for all relevant tables/views
-    const channels = [
-      supabase.channel('realtime:daily_agg').on('postgres_changes', { event: '*', schema: 'public', table: 'daily_agg' }, fetchAll),
-      supabase.channel('realtime:accounts').on('postgres_changes', { event: '*', schema: 'public', table: 'accounts' }, fetchAll),
-      supabase.channel('realtime:v_daily_video').on('postgres_changes', { event: '*', schema: 'public', table: 'v_daily_video' }, fetchAll),
-      supabase.channel('realtime:v_daily_video_delta').on('postgres_changes', { event: '*', schema: 'public', table: 'v_daily_video_delta' }, fetchAll),
-    ];
-    channels.forEach(channel => channel.subscribe());
-    return () => {
-      channels.forEach(channel => supabase.removeChannel(channel));
-    };
-  }, []);
+    if (isAuthenticated && clientId) {
+      fetchAll();
+      // Subscribe to real-time updates for all relevant tables/views
+      const channels = [
+        supabase.channel('realtime:daily_agg').on('postgres_changes', { event: '*', schema: 'public', table: 'daily_agg' }, fetchAll),
+        supabase.channel('realtime:accounts').on('postgres_changes', { event: '*', schema: 'public', table: 'accounts' }, fetchAll),
+        supabase.channel('realtime:v_daily_video').on('postgres_changes', { event: '*', schema: 'public', table: 'v_daily_video' }, fetchAll),
+        supabase.channel('realtime:v_daily_video_delta').on('postgres_changes', { event: '*', schema: 'public', table: 'v_daily_video_delta' }, fetchAll),
+      ];
+      channels.forEach(channel => channel.subscribe());
+      return () => {
+        channels.forEach(channel => supabase.removeChannel(channel));
+      };
+    }
+  }, [isAuthenticated, clientId]);
 
   // Fetch account count when date range changes
   useEffect(() => {
-    if (dateRange.startDate && dateRange.endDate) {
+    if (dateRange.startDate && dateRange.endDate && isAuthenticated && clientId) {
       fetchAccountCountForDateRange(dateRange.startDate, dateRange.endDate, selectedPlatform);
     }
-  }, [dateRange, selectedPlatform]);
+  }, [dateRange, selectedPlatform, isAuthenticated, clientId]);
 
   const currentData = selectedPlatform === 'tiktok' ? tiktokData : instagramData;
   const currentAccounts = selectedPlatform === 'tiktok' ? tiktokAccounts : instagramAccounts;
@@ -219,14 +234,27 @@ export default function Page() {
   // Format the date range for display
   const dateRangeText = formatDateRangeForDisplay(dateRange.startDate, dateRange.endDate, dateRange.period);
 
+  // Show login form if not authenticated
+  if (!isAuthenticated) {
+    return <LoginForm onLogin={handleLogin} />;
+  }
+
   return (
     <main className="min-h-screen bg-gradient-to-br from-[#18181b] to-[#23272f] flex flex-col items-center py-12 font-sans">
       <div className="w-full max-w-4xl">
         <header className="mb-8 flex flex-col items-center">
-          <h1 className="text-4xl font-extrabold text-white tracking-tight mb-2 drop-shadow flex items-center gap-3">
-            <img src={platformLogo} alt={`${platformName} Logo`} className="h-10 w-10" />
-            {platformName} Dashboard
-          </h1>
+          <div className="flex items-center justify-between w-full mb-4">
+            <div className="flex items-center gap-3">
+              <img src={platformLogo} alt={`${platformName} Logo`} className="h-10 w-10" />
+              <h1 className="text-4xl font-extrabold text-white tracking-tight drop-shadow">
+                {platformName} Dashboard
+              </h1>
+            </div>
+            <div className="text-right">
+              <p className="text-slate-400 text-sm">Client ID: {clientId}</p>
+              {clientModel && <p className="text-slate-400 text-sm">Model: {clientModel}</p>}
+            </div>
+          </div>
           <p className="text-slate-400 text-lg">{platformDescription}</p>
         </header>
         
@@ -292,10 +320,10 @@ export default function Page() {
         )}
         
         {/* Top Posts - Always use unfiltered data */}
-        {selectedPlatform === 'tiktok' ? <TopPostsCard /> : <InstagramTopPostsCard />}
+        {selectedPlatform === 'tiktok' ? <TopPostsCard clientId={clientId} /> : <InstagramTopPostsCard clientId={clientId} />}
         
         {/* Accounts - Always use unfiltered data */}
-        <UnifiedAccountsCard platform={selectedPlatform} />
+        <UnifiedAccountsCard platform={selectedPlatform} clientId={clientId} />
       </div>
     </main>
   );

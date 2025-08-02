@@ -17,7 +17,11 @@ const PERIODS = [
   { label: 'All Time', value: 'all' },
 ];
 
-export default function TopPostsCard() {
+interface TopPostsCardProps {
+  clientId: string;
+}
+
+export default function TopPostsCard({ clientId }: TopPostsCardProps) {
   const [period, setPeriod] = useState<'today' | 'yesterday' | '3days' | '7days' | 'month' | 'all'>('today');
   const [posts, setPosts] = useState<TopPost[]>([]);
   const [loading, setLoading] = useState(false);
@@ -28,9 +32,12 @@ export default function TopPostsCard() {
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch(`/api/top-posts?period=${period}`, { cache: 'no-store' });
+        const res = await fetch(`/api/top-posts?period=${period}&clientId=${clientId}`, { cache: 'no-store' });
         if (!res.ok) throw new Error('Failed to fetch');
         const data = await res.json();
+        console.log('TopPostsCard received data:', data);
+        console.log('Posts array:', data.posts);
+        console.log('Posts length:', data.posts?.length || 0);
         setPosts(data.posts);
       } catch (err: any) {
         setError(err.message || 'Error fetching posts');
@@ -39,7 +46,7 @@ export default function TopPostsCard() {
       }
     }
     fetchData();
-  }, [period]);
+  }, [period, clientId]);
 
   return (
     <div className="backdrop-blur-md bg-white/5 border border-white/10 rounded-2xl shadow-xl p-6 mt-8">

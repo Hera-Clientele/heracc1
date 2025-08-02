@@ -42,11 +42,17 @@ function getDateRange(period: string) {
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const period = searchParams.get('period') || 'today';
+  const clientId = searchParams.get('clientId');
   const { from, to } = getDateRange(period);
+
+  if (!clientId) {
+    return NextResponse.json({ error: 'Client ID is required' }, { status: 400 });
+  }
 
   let query = supabase
     .from('v_latest_instagram')
     .select('video_id,username,url,created_at,views,post_caption')
+    .eq('client_id', parseInt(clientId, 10))
     .order('views', { ascending: false })
     .limit(10);
 
@@ -60,5 +66,6 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  console.log('instagram top-posts API returning:', { posts: data?.length || 0, sample: data?.[0] });
   return NextResponse.json({ posts: data });
 } 

@@ -18,21 +18,24 @@ dayjs.extend(utc);
 dayjs.extend(timezone);
 
 interface InstagramRow {
-  date: string;
-  total_views: number | string;
-  total_likes: number | string;
-  total_comments: number | string;
-  videos_scraped: number | string;
+  day: string;
+  posts: number;
+  accounts: number;
+  views: number;
+  likes: number;
+  comments: number;
+  shares: number;
+  engagement_rate: number;
 }
 
 export default function InstagramTotalViewsChart({ data }: { data: InstagramRow[] }) {
   // Ensure all fields are numbers
   const chartData = data.map(row => ({
-    date: row.date,
-    total_views: Number(row.total_views),
-    total_likes: Number(row.total_likes),
-    total_comments: Number(row.total_comments),
-    videos_scraped: Number(row.videos_scraped),
+    date: row.day,
+    total_views: Number(row.views),
+    total_likes: Number(row.likes),
+    total_comments: Number(row.comments),
+    posts: Number(row.posts),
   }));
 
   // Compute cumulative views

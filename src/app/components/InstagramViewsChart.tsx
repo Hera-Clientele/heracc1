@@ -18,11 +18,14 @@ dayjs.extend(utc);
 dayjs.extend(timezone);
 
 interface InstagramRow {
-  date: string;
-  total_views: number | string;
-  total_likes: number | string;
-  total_comments: number | string;
-  videos_scraped: number | string;
+  day: string;
+  posts: number;
+  accounts: number;
+  views: number;
+  likes: number;
+  comments: number;
+  shares: number;
+  engagement_rate: number;
 }
 
 // Utility function to calculate next update time
@@ -59,8 +62,8 @@ function getLastUpdateTime() {
 export default function InstagramViewsChart({ data }: { data: InstagramRow[] }) {
   // Compute daily views gained per day
   const dailyViewsChartData = data.map(row => ({
-    date: row.date,
-    total_views: Number(row.total_views),
+    date: row.day,
+    total_views: Number(row.views),
   }));
   const dailyGains = dailyViewsChartData.map((row) => ({
     date: row.date,
@@ -69,8 +72,8 @@ export default function InstagramViewsChart({ data }: { data: InstagramRow[] }) 
 
   // Compute daily posts
   const dailyPostsChartData = data.map(row => ({
-    date: row.date,
-    videos_scraped: Number(row.videos_scraped),
+    date: row.day,
+    posts: Number(row.posts),
   }));
 
   // Get update times
@@ -173,13 +176,13 @@ export default function InstagramViewsChart({ data }: { data: InstagramRow[] }) 
             <Tooltip content={<PostsTooltip />} />
             <Area
               type="linear"
-              dataKey="videos_scraped"
+              dataKey="posts"
               stroke="none"
               fill="url(#colorPosts)"
             />
             <Line
               type="linear"
-              dataKey="videos_scraped"
+              dataKey="posts"
               stroke="#10b981"
               strokeWidth={2}
               dot={{ r: 3 }}

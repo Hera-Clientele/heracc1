@@ -27,7 +27,7 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-export async function fetchAccountsWithViews(platform?: 'tiktok' | 'instagram'): Promise<AccountWithViews[]> {
+export async function fetchAccountsWithViews(platform?: 'tiktok' | 'instagram', clientId?: string): Promise<AccountWithViews[]> {
   let query = supabase
     .from('accounts')
     .select('*')
@@ -36,6 +36,11 @@ export async function fetchAccountsWithViews(platform?: 'tiktok' | 'instagram'):
   // Filter by platform if specified
   if (platform) {
     query = query.eq('platform', platform);
+  }
+
+  // Filter by client_id if specified
+  if (clientId) {
+    query = query.eq('client_id', clientId);
   }
 
   const { data, error } = await query;

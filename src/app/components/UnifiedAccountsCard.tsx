@@ -4,9 +4,10 @@ import type { AccountWithViews } from '../lib/fetchAccountsWithViews';
 
 interface UnifiedAccountsCardProps {
   platform: 'tiktok' | 'instagram';
+  clientId: string;
 }
 
-export default function UnifiedAccountsCard({ platform }: UnifiedAccountsCardProps) {
+export default function UnifiedAccountsCard({ platform, clientId }: UnifiedAccountsCardProps) {
   const [accounts, setAccounts] = useState<AccountWithViews[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -14,7 +15,7 @@ export default function UnifiedAccountsCard({ platform }: UnifiedAccountsCardPro
   useEffect(() => {
     async function fetchAccounts() {
       try {
-        const res = await fetch(`/api/accounts?platform=${platform}`, { cache: 'no-store' });
+        const res = await fetch(`/api/accounts?platform=${platform}&clientId=${clientId}`, { cache: 'no-store' });
         if (!res.ok) throw new Error(`Failed to fetch ${platform} accounts`);
         const data = await res.json();
         setAccounts(data.accounts || []);
@@ -28,7 +29,7 @@ export default function UnifiedAccountsCard({ platform }: UnifiedAccountsCardPro
       }
     }
     fetchAccounts();
-  }, [platform]);
+  }, [platform, clientId]);
 
   if (loading) {
     return (

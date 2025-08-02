@@ -5,11 +5,14 @@ import isoWeek from 'dayjs/plugin/isoWeek';
 dayjs.extend(isoWeek);
 
 interface InstagramRow {
-  date: string;
-  total_views: number;
-  total_likes: number;
-  total_comments: number;
-  videos_scraped: number;
+  day: string;
+  posts: number;
+  accounts: number;
+  views: number;
+  likes: number;
+  comments: number;
+  shares: number;
+  engagement_rate: number;
 }
 
 function getWeekNumber(date: string) {
@@ -29,19 +32,19 @@ export default function InstagramWeeklyStats({ data }: { data: InstagramRow[] })
   // Group data by week number
   const weeks: Record<string, InstagramRow[]> = {};
   for (const row of data) {
-    const week = getWeekNumber(row.date);
+    const week = getWeekNumber(row.day);
     if (!weeks[week]) weeks[week] = [];
     weeks[week].push(row);
   }
 
   // Prepare weekly stats
   const weeklyStats = Object.entries(weeks).map(([week, rows]) => {
-    const totalViews = rows.reduce((sum, r) => sum + Number(r.total_views), 0);
-    const totalLikes = rows.reduce((sum, r) => sum + Number(r.total_likes), 0);
-    const totalComments = rows.reduce((sum, r) => sum + Number(r.total_comments), 0);
-    const totalPosts = rows.reduce((sum, r) => sum + Number(r.videos_scraped), 0);
+    const totalViews = rows.reduce((sum, r) => sum + Number(r.views), 0);
+    const totalLikes = rows.reduce((sum, r) => sum + Number(r.likes), 0);
+    const totalComments = rows.reduce((sum, r) => sum + Number(r.comments), 0);
+    const totalPosts = rows.reduce((sum, r) => sum + Number(r.posts), 0);
     const engagement = totalViews === 0 ? 0 : ((totalLikes + totalComments) / totalViews) * 100;
-    const weekRange = getWeekRange(rows.map(r => r.date));
+    const weekRange = getWeekRange(rows.map(r => r.day));
     return {
       week,
       weekRange,
