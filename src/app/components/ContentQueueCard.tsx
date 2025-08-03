@@ -75,7 +75,9 @@ export default function ContentQueueCard({ clientId, platform }: ContentQueueCar
   // Auto-collapse all accounts when data changes
   useEffect(() => {
     if (contentQueue.length > 0) {
-      const accountKeys = [...new Set(contentQueue.map(item => item.account_username))];
+      const accountKeys = contentQueue
+        .map(item => item.account_username)
+        .filter((username): username is string => Boolean(username));
       setCollapsedAccounts(new Set(accountKeys));
     }
   }, [contentQueue]);
