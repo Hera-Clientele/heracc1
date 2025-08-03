@@ -16,6 +16,7 @@ import InstagramAccountsCard from './components/InstagramAccountsCard';
 import UnifiedAccountsCard from './components/UnifiedAccountsCard';
 import PlatformSelector, { Platform } from './components/PlatformSelector';
 import LoginForm from './components/LoginForm';
+import ContentQueueCard from './components/ContentQueueCard';
 import type { Row } from './lib/fetchDailyAgg';
 import type { AccountWithViews } from './lib/fetchAccountsWithViews';
 import { createClient } from '@supabase/supabase-js';
@@ -200,6 +201,7 @@ export default function Page() {
         supabase.channel('realtime:accounts').on('postgres_changes', { event: '*', schema: 'public', table: 'accounts' }, fetchAll),
         supabase.channel('realtime:v_daily_video').on('postgres_changes', { event: '*', schema: 'public', table: 'v_daily_video' }, fetchAll),
         supabase.channel('realtime:v_daily_video_delta').on('postgres_changes', { event: '*', schema: 'public', table: 'v_daily_video_delta' }, fetchAll),
+        supabase.channel('realtime:content_queue').on('postgres_changes', { event: '*', schema: 'public', table: 'content_queue' }, fetchAll),
       ];
       channels.forEach(channel => channel.subscribe());
       return () => {
@@ -218,11 +220,13 @@ export default function Page() {
   const currentData = selectedPlatform === 'tiktok' ? tiktokData : instagramData;
   const currentAccounts = selectedPlatform === 'tiktok' ? tiktokAccounts : instagramAccounts;
   const currentError = selectedPlatform === 'tiktok' ? tiktokError : instagramError;
-  const platformName = selectedPlatform === 'tiktok' ? 'TikTok' : 'Instagram';
-  const platformLogo = selectedPlatform === 'tiktok' ? '/tiktok-1.svg' : '/ig.svg';
+  const platformName = selectedPlatform === 'tiktok' ? 'TikTok' : selectedPlatform === 'instagram' ? 'Instagram' : 'Scheduled Posts';
+  const platformLogo = selectedPlatform === 'tiktok' ? '/tiktok-1.svg' : selectedPlatform === 'instagram' ? '/ig.svg' : '';
   const platformDescription = selectedPlatform === 'tiktok' 
     ? 'Your daily TikTok performance in one glance' 
-    : 'Your daily Instagram performance at a glance';
+    : selectedPlatform === 'instagram'
+    ? 'Your daily Instagram performance at a glance'
+    : 'Manage and monitor your scheduled content';
 
   // Filter data based on current date range
   const filteredData = filterDataByDateRange(currentData, dateRange.startDate, dateRange.endDate);
@@ -262,67 +266,77 @@ export default function Page() {
           onPlatformChange={setSelectedPlatform} 
         />
         
-        {/* Total Views Over Time Chart - Top of page */}
-        <section className="mb-6">
-          {loading ? (
-            <div className="text-slate-300 py-8 text-center">Loading...</div>
-          ) : currentError ? (
-            <div className="text-red-400 py-8 text-center">{currentError}</div>
-          ) : selectedPlatform === 'tiktok' ? (
-            <TotalViewsChart data={currentData} />
-          ) : (
-            <InstagramTotalViewsChart data={currentData} />
-          )}
-        </section>
+        {/* Content for TikTok and Instagram platforms */}
+        {selectedPlatform !== 'scheduled' && (
+          <>
+            {/* Total Views Over Time Chart - Top of page */}
+            <section className="mb-6">
+              {loading ? (
+                <div className="text-slate-300 py-8 text-center">Loading...</div>
+              ) : currentError ? (
+                <div className="text-red-400 py-8 text-center">{currentError}</div>
+              ) : selectedPlatform === 'tiktok' ? (
+                <TotalViewsChart data={currentData} />
+              ) : (
+                <InstagramTotalViewsChart data={currentData} />
+              )}
+            </section>
 
-        {/* Date Range Selector */}
-        <section className="mb-10">
-          <DateRangeSelector 
-            onDateRangeChange={handleDateRangeChange}
-            currentRange={dateRange}
-          />
-        </section>
-        
-        {/* Account Performance - Single section with dynamic date range */}
-        <section className="mb-10">
-          <h3 className="text-lg font-semibold text-white mb-4">Account Performance ({dateRangeText})</h3>
-          {loading ? (
-            <div className="text-slate-300 py-8 text-center">Loading...</div>
-          ) : currentError ? (
-            <div className="text-red-400 py-8 text-center">{currentError}</div>
-          ) : selectedPlatform === 'tiktok' ? (
-            <StatsGrid data={filteredData} uniqueAccounts={loadingAccountCount ? 0 : filteredAccountCount} />
-          ) : (
-            <InstagramStatsGrid data={filteredData} uniqueAccounts={loadingAccountCount ? 0 : filteredAccountCount} />
-          )}
-        </section>
-        
-        {/* Daily Views Gained and Daily Posts Charts */}
-        <section className="backdrop-blur-md bg-white/5 border border-white/10 rounded-2xl shadow-xl p-6 mb-10">
-          {loading ? (
-            <div className="text-slate-300 py-8 text-center">Loading...</div>
-          ) : currentError ? (
-            <div className="text-red-400 py-8 text-center">{currentError}</div>
-          ) : selectedPlatform === 'tiktok' ? (
-            <ViewsChart data={filteredData} />
-          ) : (
-            <InstagramViewsChart data={filteredData} />
-          )}
-        </section>
-        
-        {/* Weekly Statistics - Always use unfiltered data */}
-        {selectedPlatform === 'tiktok' && (
-          <TikTokWeeklyStats data={currentData} />
+            {/* Date Range Selector */}
+            <section className="mb-10">
+              <DateRangeSelector 
+                onDateRangeChange={handleDateRangeChange}
+                currentRange={dateRange}
+              />
+            </section>
+            
+            {/* Account Performance - Single section with dynamic date range */}
+            <section className="mb-10">
+              <h3 className="text-lg font-semibold text-white mb-4">Account Performance ({dateRangeText})</h3>
+              {loading ? (
+                <div className="text-slate-300 py-8 text-center">Loading...</div>
+              ) : currentError ? (
+                <div className="text-red-400 py-8 text-center">{currentError}</div>
+              ) : selectedPlatform === 'tiktok' ? (
+                <StatsGrid data={filteredData} uniqueAccounts={loadingAccountCount ? 0 : filteredAccountCount} />
+              ) : (
+                <InstagramStatsGrid data={filteredData} uniqueAccounts={loadingAccountCount ? 0 : filteredAccountCount} />
+              )}
+            </section>
+            
+            {/* Daily Views Gained and Daily Posts Charts */}
+            <section className="backdrop-blur-md bg-white/5 border border-white/10 rounded-2xl shadow-xl p-6 mb-10">
+              {loading ? (
+                <div className="text-slate-300 py-8 text-center">Loading...</div>
+              ) : currentError ? (
+                <div className="text-red-400 py-8 text-center">{currentError}</div>
+              ) : selectedPlatform === 'tiktok' ? (
+                <ViewsChart data={filteredData} />
+              ) : (
+                <InstagramViewsChart data={filteredData} />
+              )}
+            </section>
+            
+            {/* Weekly Statistics - Always use unfiltered data */}
+            {selectedPlatform === 'tiktok' && (
+              <TikTokWeeklyStats data={currentData} />
+            )}
+            {selectedPlatform === 'instagram' && (
+              <InstagramWeeklyStats data={currentData} />
+            )}
+            
+            {/* Top Posts - Always use unfiltered data */}
+            {selectedPlatform === 'tiktok' ? <TopPostsCard clientId={clientId} /> : <InstagramTopPostsCard clientId={clientId} />}
+            
+            {/* Accounts - Always use unfiltered data */}
+            <UnifiedAccountsCard platform={selectedPlatform as 'tiktok' | 'instagram'} clientId={clientId} />
+          </>
         )}
-        {selectedPlatform === 'instagram' && (
-          <InstagramWeeklyStats data={currentData} />
+
+        {/* Content for Scheduled Posts platform */}
+        {selectedPlatform === 'scheduled' && (
+          <ContentQueueCard clientId={clientId} />
         )}
-        
-        {/* Top Posts - Always use unfiltered data */}
-        {selectedPlatform === 'tiktok' ? <TopPostsCard clientId={clientId} /> : <InstagramTopPostsCard clientId={clientId} />}
-        
-        {/* Accounts - Always use unfiltered data */}
-        <UnifiedAccountsCard platform={selectedPlatform} clientId={clientId} />
       </div>
     </main>
   );
