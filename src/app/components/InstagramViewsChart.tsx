@@ -121,7 +121,7 @@ export default function InstagramViewsChart({ data }: { data: InstagramRow[] }) 
               dataKey="date"
               tick={{ fontSize: 12 }}
               tickFormatter={(date) => dayjs(date).tz('America/New_York').format("MM/DD")}
-              interval={0}
+              interval="preserveStartEnd"
             />
             <YAxis tick={{ fontSize: 12 }} allowDecimals={false} domain={[0, 'auto']} tickFormatter={tick => tick === 0 ? '' : tick} />
             <Tooltip content={<DailyGainTooltip />} />
@@ -159,7 +159,7 @@ export default function InstagramViewsChart({ data }: { data: InstagramRow[] }) 
               dataKey="date"
               tick={{ fontSize: 12 }}
               tickFormatter={(date) => dayjs(date).tz('America/New_York').format("MM/DD")}
-              interval={0}
+              interval="preserveStartEnd"
             />
             <YAxis tick={{ fontSize: 12 }} allowDecimals={false} domain={[0, 'auto']} tickFormatter={tick => tick === 0 ? '' : tick} />
             <Tooltip content={<PostsTooltip />} />

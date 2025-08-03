@@ -343,7 +343,7 @@ export default function ContentQueueCard({ clientId, platform }: ContentQueueCar
       </div>
 
       {/* Content Queue Table */}
-      <div className="overflow-x-auto">
+      <div className="h-[768px] overflow-y-auto overflow-x-auto pr-2 custom-scrollbar">
         {sortedAccounts.length === 0 ? (
           <div className="text-center py-8 text-slate-400">
             No scheduled posts found

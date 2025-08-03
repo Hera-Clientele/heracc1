@@ -17,4 +17,26 @@
   .scrollbar-hide::-webkit-scrollbar {
     display: none;  /* Safari and Chrome */
   }
+  
+  .custom-scrollbar {
+    scrollbar-width: thin;  /* Firefox */
+    scrollbar-color: rgba(255, 255, 255, 0.2) transparent;  /* Firefox */
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;  /* Chrome, Safari, Edge */
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;  /* Chrome, Safari, Edge */
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);  /* Chrome, Safari, Edge */
+    border-radius: 3px;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);  /* Chrome, Safari, Edge */
+  }
 } 

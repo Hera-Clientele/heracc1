@@ -10,6 +10,11 @@ export async function GET(req: NextRequest) {
       return Response.json({ error: 'Client ID is required' }, { status: 400 });
     }
     
+    // If clientId is 'all', return empty data for now
+    if (clientId === 'all') {
+      return Response.json({ data: [] });
+    }
+    
     const data = await fetchDailyAgg(clientId);
     console.log('daily-agg API returning:', { count: data?.length || 0, sample: data?.[0] });
     return Response.json({ data });

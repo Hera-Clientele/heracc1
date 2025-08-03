@@ -49,6 +49,11 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: 'Client ID is required' }, { status: 400 });
   }
 
+  // If clientId is 'all', return empty data for now
+  if (clientId === 'all') {
+    return NextResponse.json({ posts: [] });
+  }
+
   let query = supabase
     .from('v_latest_instagram')
     .select('video_id,username,url,created_at,views,post_caption')

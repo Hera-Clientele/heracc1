@@ -133,7 +133,7 @@ export default function ViewsChart({ data }: { data: Row[] }) {
               dataKey="day"
               tick={{ fontSize: 12 }}
               tickFormatter={(date) => date === initialDate ? "" : dayjs(date).tz('America/New_York').format("MM/DD")}
-              interval={0}
+              interval="preserveStartEnd"
             />
             <YAxis tick={{ fontSize: 12 }} allowDecimals={false} domain={[0, 'auto']} tickFormatter={tick => tick === 0 ? '' : tick} />
             <Tooltip content={<DailyGainTooltip />} />
@@ -171,7 +171,7 @@ export default function ViewsChart({ data }: { data: Row[] }) {
               dataKey="day"
               tick={{ fontSize: 12 }}
               tickFormatter={(date) => date === initialDate ? "" : dayjs(date).tz('America/New_York').format("MM/DD")}
-              interval={0}
+              interval="preserveStartEnd"
             />
             <YAxis tick={{ fontSize: 12 }} allowDecimals={false} domain={[0, 'auto']} tickFormatter={tick => tick === 0 ? '' : tick} />
             <Tooltip content={<PostsTooltip />} />

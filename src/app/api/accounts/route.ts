@@ -11,7 +11,10 @@ export async function GET(req: NextRequest) {
       return Response.json({ error: 'Client ID is required' }, { status: 400 });
     }
     
-    const accounts = await fetchAccountsWithViews(platform, clientId);
+    // If clientId is 'all', don't filter by client_id
+    const actualClientId = clientId === 'all' ? undefined : clientId;
+    
+    const accounts = await fetchAccountsWithViews(platform, actualClientId);
     return Response.json({ accounts });
   } catch (error: any) {
     return Response.json({ error: error.message }, { status: 500 });

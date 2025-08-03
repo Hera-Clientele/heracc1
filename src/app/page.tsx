@@ -15,8 +15,9 @@ import InstagramTopPostsCard from './components/InstagramTopPostsCard';
 import InstagramAccountsCard from './components/InstagramAccountsCard';
 import UnifiedAccountsCard from './components/UnifiedAccountsCard';
 import PlatformSelector, { Platform } from './components/PlatformSelector';
-import LoginForm from './components/LoginForm';
+import ClientSelector from './components/ClientSelector';
 import ContentQueueCard from './components/ContentQueueCard';
+import TodayPostsCard from './components/TodayPostsCard';
 import type { Row } from './lib/fetchDailyAgg';
 import type { AccountWithViews } from './lib/fetchAccountsWithViews';
 import { createClient } from '@supabase/supabase-js';
@@ -83,9 +84,7 @@ function formatDateRangeForDisplay(startDate: string, endDate: string, period: s
 }
 
 export default function Page() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [clientId, setClientId] = useState<string>('');
-  const [clientModel, setClientModel] = useState<string>('');
+  const [selectedClientId, setSelectedClientId] = useState<string>('1'); // Default to Katie Le (client_id: 1)
   const [selectedPlatform, setSelectedPlatform] = useState<Platform>('tiktok');
   const [tiktokData, setTiktokData] = useState<Row[]>([]);
   const [tiktokAccounts, setTiktokAccounts] = useState<AccountWithViews[]>([]);
@@ -111,7 +110,7 @@ export default function Page() {
   const fetchAccountCountForDateRange = async (startDate: string, endDate: string, platform: string) => {
     setLoadingAccountCount(true);
     try {
-      const response = await fetch(`/api/accounts-by-date?startDate=${startDate}&endDate=${endDate}&platform=${platform}&clientId=${clientId}`);
+      const response = await fetch(`/api/accounts-by-date?startDate=${startDate}&endDate=${endDate}&platform=${platform}&clientId=${selectedClientId}`);
       if (response.ok) {
         const data = await response.json();
         setFilteredAccountCount(data.uniqueAccounts);
@@ -129,15 +128,17 @@ export default function Page() {
     }
   };
 
-  // Handle login
-  const handleLogin = (clientId: string, model: string) => {
-    setClientId(clientId);
-    setClientModel(model);
-    setIsAuthenticated(true);
-  };
-
   async function fetchAll() {
-    if (!isAuthenticated || !clientId) return;
+    if (selectedClientId === 'all') {
+      // For "all clients", we'll show empty data or handle differently
+      setTiktokData([]);
+      setTiktokAccounts([]);
+      setInstagramData([]);
+      setInstagramAccounts([]);
+      setInstagramUniqueAccounts(0);
+      setLoading(false);
+      return;
+    }
     
     setLoading(true);
     setTiktokError(null);
@@ -145,8 +146,8 @@ export default function Page() {
     try {
       // Fetch TikTok data using the new unified accounts API
       const [tiktokAggRes, tiktokAccRes] = await Promise.all([
-        fetch(`/api/daily-agg?clientId=${clientId}`, { cache: 'no-store' }),
-        fetch(`/api/accounts?platform=tiktok&clientId=${clientId}`, { cache: 'no-store' })
+        fetch(`/api/daily-agg?clientId=${selectedClientId}`, { cache: 'no-store' }),
+        fetch(`/api/accounts?platform=tiktok&clientId=${selectedClientId}`, { cache: 'no-store' })
       ]);
       
       if (!tiktokAggRes.ok || !tiktokAccRes.ok) throw new Error('Failed to fetch TikTok dashboard data');
@@ -160,7 +161,7 @@ export default function Page() {
       // Fetch Instagram daily aggregates
       let instagramAggData: any[] = [];
       try {
-        const res = await fetch(`/api/instagram/daily-agg?clientId=${clientId}`, { cache: 'no-store' });
+        const res = await fetch(`/api/instagram/daily-agg?clientId=${selectedClientId}`, { cache: 'no-store' });
         if (res.ok) {
           const json = await res.json();
           instagramAggData = json.data || [];
@@ -174,7 +175,7 @@ export default function Page() {
 
       // Fetch Instagram accounts using the new unified accounts API
       try {
-        const res = await fetch(`/api/accounts?platform=instagram&clientId=${clientId}`, { cache: 'no-store' });
+        const res = await fetch(`/api/accounts?platform=instagram&clientId=${selectedClientId}`, { cache: 'no-store' });
         if (res.ok) {
           const json = await res.json();
           setInstagramUniqueAccounts(json.accounts.length || 0);
@@ -193,29 +194,29 @@ export default function Page() {
   }
 
   useEffect(() => {
-    if (isAuthenticated && clientId) {
-      fetchAll();
-      // Subscribe to real-time updates for all relevant tables/views
-      const channels = [
-        supabase.channel('realtime:daily_agg').on('postgres_changes', { event: '*', schema: 'public', table: 'daily_agg' }, fetchAll),
-        supabase.channel('realtime:accounts').on('postgres_changes', { event: '*', schema: 'public', table: 'accounts' }, fetchAll),
-        supabase.channel('realtime:v_daily_video').on('postgres_changes', { event: '*', schema: 'public', table: 'v_daily_video' }, fetchAll),
-        supabase.channel('realtime:v_daily_video_delta').on('postgres_changes', { event: '*', schema: 'public', table: 'v_daily_video_delta' }, fetchAll),
-        supabase.channel('realtime:content_queue').on('postgres_changes', { event: '*', schema: 'public', table: 'content_queue' }, fetchAll),
-      ];
-      channels.forEach(channel => channel.subscribe());
-      return () => {
-        channels.forEach(channel => supabase.removeChannel(channel));
-      };
-    }
-  }, [isAuthenticated, clientId]);
+    fetchAll();
+    // Subscribe to real-time updates for all relevant tables/views
+    const channels = [
+      supabase.channel('realtime:daily_agg').on('postgres_changes', { event: '*', schema: 'public', table: 'daily_agg' }, fetchAll),
+      supabase.channel('realtime:accounts').on('postgres_changes', { event: '*', schema: 'public', table: 'accounts' }, fetchAll),
+      supabase.channel('realtime:v_daily_video').on('postgres_changes', { event: '*', schema: 'public', table: 'v_daily_video' }, fetchAll),
+      supabase.channel('realtime:v_daily_video_delta').on('postgres_changes', { event: '*', schema: 'public', table: 'v_daily_video_delta' }, fetchAll),
+      supabase.channel('realtime:content_queue').on('postgres_changes', { event: '*', schema: 'public', table: 'content_queue' }, fetchAll),
+    ];
+    channels.forEach(channel => channel.subscribe());
+    return () => {
+      channels.forEach(channel => supabase.removeChannel(channel));
+    };
+  }, [selectedClientId]);
 
   // Fetch account count when date range changes
   useEffect(() => {
-    if (dateRange.startDate && dateRange.endDate && isAuthenticated && clientId) {
+    if (dateRange.startDate && dateRange.endDate && selectedClientId !== 'all') {
       fetchAccountCountForDateRange(dateRange.startDate, dateRange.endDate, selectedPlatform);
+    } else if (selectedClientId === 'all') {
+      setFilteredAccountCount(0);
     }
-  }, [dateRange, selectedPlatform, isAuthenticated, clientId]);
+  }, [dateRange, selectedPlatform, selectedClientId]);
 
   const currentData = selectedPlatform === 'tiktok' ? tiktokData : instagramData;
   const currentAccounts = selectedPlatform === 'tiktok' ? tiktokAccounts : instagramAccounts;
@@ -238,11 +239,6 @@ export default function Page() {
   // Format the date range for display
   const dateRangeText = formatDateRangeForDisplay(dateRange.startDate, dateRange.endDate, dateRange.period);
 
-  // Show login form if not authenticated
-  if (!isAuthenticated) {
-    return <LoginForm onLogin={handleLogin} />;
-  }
-
   return (
     <main className="min-h-screen bg-gradient-to-br from-[#18181b] to-[#23272f] flex flex-col items-center py-12 font-sans">
       <div className="w-full max-w-4xl">
@@ -254,12 +250,13 @@ export default function Page() {
                 Hera Dashboard
               </h1>
             </div>
-            <div className="text-right">
-              <p className="text-slate-400 text-sm">Client ID: {clientId}</p>
-              {clientModel && <p className="text-slate-400 text-sm">Model: {clientModel}</p>}
-            </div>
           </div>
         </header>
+        
+        <ClientSelector 
+          selectedClientId={selectedClientId} 
+          onClientChange={setSelectedClientId} 
+        />
         
         <PlatformSelector 
           selectedPlatform={selectedPlatform} 
@@ -325,18 +322,21 @@ export default function Page() {
               <InstagramWeeklyStats data={currentData} />
             )}
             
-            {/* Top Posts - Always use unfiltered data */}
-            {selectedPlatform === 'tiktok' ? <TopPostsCard clientId={clientId} /> : <InstagramTopPostsCard clientId={clientId} />}
-            
-            {/* Accounts - Always use unfiltered data */}
-            <UnifiedAccountsCard platform={selectedPlatform as 'tiktok' | 'instagram'} clientId={clientId} />
-          </>
-        )}
+                    {/* Top Posts - Always use unfiltered data */}
+        {selectedPlatform === 'tiktok' ? <TopPostsCard clientId={selectedClientId} /> : <InstagramTopPostsCard clientId={selectedClientId} />}
+        
+        {/* Accounts - Always use unfiltered data */}
+        <UnifiedAccountsCard platform={selectedPlatform as 'tiktok' | 'instagram'} clientId={selectedClientId} />
+      </>
+    )}
 
-        {/* Content for Scheduled Posts platform */}
-        {selectedPlatform === 'scheduled' && (
-          <ContentQueueCard clientId={clientId} />
-        )}
+    {/* Content for Scheduled Posts platform */}
+    {selectedPlatform === 'scheduled' && (
+      <>
+        <TodayPostsCard clientId={selectedClientId} />
+        <ContentQueueCard clientId={selectedClientId} />
+      </>
+    )}
       </div>
     </main>
   );

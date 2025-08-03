@@ -39,7 +39,7 @@ export async function fetchAccountsWithViews(platform?: 'tiktok' | 'instagram', 
   }
 
   // Filter by client_id if specified
-  if (clientId) {
+  if (clientId && clientId !== 'all') {
     query = query.eq('client_id', clientId);
   }
 

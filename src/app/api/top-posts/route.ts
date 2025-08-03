@@ -10,6 +10,11 @@ export async function GET(req: NextRequest) {
     return Response.json({ error: 'Client ID is required' }, { status: 400 });
   }
   
+  // If clientId is 'all', return empty data for now
+  if (clientId === 'all') {
+    return Response.json({ posts: [] });
+  }
+  
   try {
     const posts = await fetchTopPosts(period, clientId);
     console.log('TopPosts API returning:', { posts: posts?.length || 0, sample: posts?.[0] });
