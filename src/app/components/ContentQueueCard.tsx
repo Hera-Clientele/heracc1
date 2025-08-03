@@ -308,13 +308,20 @@ export default function ContentQueueCard({ clientId, platform }: ContentQueueCar
         <select
           value={selectedStatus}
           onChange={(e) => setSelectedStatus(e.target.value)}
-          className="bg-white/10 border border-white/20 rounded-lg px-3 py-1 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="bg-white/10 border border-white/20 rounded-lg px-3 py-1 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none"
+          style={{
+            backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23ffffff' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e")`,
+            backgroundPosition: 'right 0.5rem center',
+            backgroundRepeat: 'no-repeat',
+            backgroundSize: '1.5em 1.5em',
+            paddingRight: '2.5rem'
+          }}
         >
-          <option value="all">All Status</option>
+          <option value="all" className="bg-gray-800 text-white">All Status</option>
           {Object.entries(statusLabels)
             .filter(([key]) => key !== 'success') // Exclude posted items from filter
             .map(([key, label]) => (
-              <option key={key} value={key}>
+              <option key={key} value={key} className="bg-gray-800 text-white">
                 {label} ({statusCounts[key] || 0})
               </option>
             ))}
