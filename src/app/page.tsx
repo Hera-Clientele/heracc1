@@ -97,7 +97,7 @@ export default function Page() {
   
   // Global date range state
   const [dateRange, setDateRange] = useState<DateRange>({
-    startDate: '2025-07-07',
+    startDate: '2025-08-03',
     endDate: dayjs().tz('America/New_York').format('YYYY-MM-DD'),
     period: 'all'
   });
