@@ -22,23 +22,42 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Client ID is required' }, { status: 400 });
     }
 
-    // Query the accounts table for accounts created within the date range
-    const { data, error } = await supabase
-      .from('accounts')
-      .select('username')
-      .eq('platform', platform)
-      .eq('client_id', clientId)
-      .gte('created_at', `${startDate}T00:00:00`)
-      .lte('created_at', `${endDate}T23:59:59`)
-      .not('username', 'is', null);
+    let uniqueUsernames: string[] = [];
 
-    if (error) {
-      console.error('Supabase error:', error);
-      return NextResponse.json({ error: 'Failed to fetch accounts' }, { status: 500 });
+    if (platform === 'tiktok') {
+      // Query latest_snapshots for TikTok accounts that posted content within the date range
+      const { data, error } = await supabase
+        .from('latest_snapshots')
+        .select('username')
+        .eq('client_id', clientId)
+        .gte('created_at', `${startDate}T00:00:00`)
+        .lte('created_at', `${endDate}T23:59:59`)
+        .not('username', 'is', null);
+
+      if (error) {
+        console.error('Supabase error:', error);
+        return NextResponse.json({ error: 'Failed to fetch TikTok accounts' }, { status: 500 });
+      }
+
+      uniqueUsernames = [...new Set(data.map(row => row.username))];
+    } else if (platform === 'instagram') {
+      // Query v_latest_instagram for Instagram accounts that posted content within the date range
+      const { data, error } = await supabase
+        .from('v_latest_instagram')
+        .select('username')
+        .eq('client_id', clientId)
+        .gte('created_at', `${startDate}T00:00:00`)
+        .lte('created_at', `${endDate}T23:59:59`)
+        .not('username', 'is', null);
+
+      if (error) {
+        console.error('Supabase error:', error);
+        return NextResponse.json({ error: 'Failed to fetch Instagram accounts' }, { status: 500 });
+      }
+
+      uniqueUsernames = [...new Set(data.map(row => row.username))];
     }
 
-    // Get unique usernames
-    const uniqueUsernames = [...new Set(data.map(row => row.username))];
     const uniqueCount = uniqueUsernames.length;
 
     return NextResponse.json({

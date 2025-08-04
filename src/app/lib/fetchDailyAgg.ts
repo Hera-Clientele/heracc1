@@ -23,6 +23,7 @@ export async function fetchDailyAgg(clientId: string): Promise<Row[]> {
     .from('tt_daily_agg')
     .select('*')
     .eq('client_id', parseInt(clientId, 10))
+    .gte('day', '2025-08-03') // Only fetch data from August 3rd onwards
     .order('day', { ascending: true });
     
   if (error) {

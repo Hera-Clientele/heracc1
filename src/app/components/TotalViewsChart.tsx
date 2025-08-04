@@ -29,22 +29,8 @@ interface Row {
 }
 
 export default function TotalViewsChart({ data }: { data: Row[] }) {
-  // Insert initial zero point for 2025-07-07
-  const initialDate = "2025-07-07";
-  const initialRow: Row = {
-    day: initialDate,
-    posts: 0,
-    accounts: 0,
-    views: 0,
-    likes: 0,
-    comments: 0,
-    shares: 0,
-    engagement_rate: 0,
-  };
-  const dataWithInitial = [initialRow, ...data];
-
   // Compute cumulative views
-  const cumulativeData = dataWithInitial.reduce((acc: Row[], curr, idx) => {
+  const cumulativeData = data.reduce((acc: Row[], curr, idx) => {
     const prevTotal = idx > 0 ? acc[idx - 1].views : 0;
     acc.push({ ...curr, views: prevTotal + curr.views });
     return acc;
@@ -79,7 +65,7 @@ export default function TotalViewsChart({ data }: { data: Row[] }) {
           <XAxis
             dataKey="day"
             tick={{ fontSize: 12 }}
-            tickFormatter={(date) => date === initialDate ? "" : dayjs(date).tz('America/New_York').format("MM/DD")}
+            tickFormatter={(date) => dayjs(date).tz('America/New_York').format("MM/DD")}
             interval="preserveStartEnd"
           />
           <YAxis tick={{ fontSize: 12 }} allowDecimals={false} domain={[0, 'auto']} tickFormatter={tick => tick === 0 ? '' : tick} />
