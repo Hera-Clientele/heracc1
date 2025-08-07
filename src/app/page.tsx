@@ -83,7 +83,7 @@ function formatDateRangeForDisplay(startDate: string, endDate: string, period: s
 }
 
 export default function Page() {
-  const [selectedClientId, setSelectedClientId] = useState<string>('all');
+  const [selectedClientId, setSelectedClientId] = useState('1');
   const [selectedPlatform, setSelectedPlatform] = useState<Platform>('tiktok');
   const [tiktokData, setTiktokData] = useState<Row[]>([]);
   const [tiktokAccounts, setTiktokAccounts] = useState<AccountWithViews[]>([]);
