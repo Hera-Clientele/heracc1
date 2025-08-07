@@ -34,6 +34,7 @@ export async function fetchInstagramDailyAgg(clientId: string): Promise<Row[]> {
       throw error;
     }
     
+    console.log('fetchInstagramDailyAgg raw result:', data);
     console.log('fetchInstagramDailyAgg result:', { count: data?.length || 0, sample: data?.[0] });
     
     // Map the data to match the expected interface (same as TikTok)

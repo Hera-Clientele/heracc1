@@ -43,7 +43,9 @@ export default function InstagramTopPostsCard({ clientId }: InstagramTopPostsCar
         const res = await fetch(`/api/instagram/top-posts?period=${period}&clientId=${clientId}`, { cache: 'no-store' });
         if (!res.ok) throw new Error('Failed to fetch');
         const data = await res.json();
-        setPosts(data.posts);
+        console.log('InstagramTopPostsCard received data:', data);
+        console.log('InstagramTopPostsCard posts array:', data.posts);
+        setPosts(data.posts || []);
       } catch (err: any) {
         setError(err.message || 'Error fetching posts');
       } finally {

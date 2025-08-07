@@ -197,7 +197,7 @@ export default function Page() {
     fetchAll();
     // Subscribe to real-time updates for all relevant tables/views
     const channels = [
-      supabase.channel('realtime:daily_agg').on('postgres_changes', { event: '*', schema: 'public', table: 'daily_agg' }, fetchAll),
+      supabase.channel('realtime:tt_daily_agg').on('postgres_changes', { event: '*', schema: 'public', table: 'tt_daily_agg' }, fetchAll),
       supabase.channel('realtime:accounts').on('postgres_changes', { event: '*', schema: 'public', table: 'accounts' }, fetchAll),
       supabase.channel('realtime:v_daily_video').on('postgres_changes', { event: '*', schema: 'public', table: 'v_daily_video' }, fetchAll),
       supabase.channel('realtime:v_daily_video_delta').on('postgres_changes', { event: '*', schema: 'public', table: 'v_daily_video_delta' }, fetchAll),

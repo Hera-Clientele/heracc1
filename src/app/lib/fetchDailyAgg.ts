@@ -30,19 +30,28 @@ export async function fetchDailyAgg(clientId: string): Promise<Row[]> {
     throw error;
   }
   
-  console.log('fetchDailyAgg result:', { count: data?.length || 0, sample: data?.[0] });
+  console.log('fetchDailyAgg raw result:', { count: data?.length || 0, sample: data?.[0] });
+  
+  // Check if we have any data
+  if (!data || data.length === 0) {
+    console.log('fetchDailyAgg: No data found for clientId:', clientId);
+    return [];
+  }
   
   // Map the data to match the expected interface
-  const mappedData = (data || []).map(row => ({
-    day: row.day,
-    posts: row.total_posts_posted || 0,
-    accounts: 0, // This might need to be calculated differently
-    views: row.total_views_gained || 0,
-    likes: row.total_likes_gained || 0,
-    comments: row.total_comments_gained || 0,
-    shares: row.total_shares_gained || 0,
-    engagement_rate: 0 // This will be calculated by the component
-  }));
+  const mappedData = (data || []).map(row => {
+    console.log('fetchDailyAgg mapping row:', row);
+    return {
+      day: row.day,
+      posts: row.total_posts_posted || 0,
+      accounts: 0, // This might need to be calculated differently
+      views: row.total_views_gained || 0,
+      likes: row.total_likes_gained || 0,
+      comments: row.total_comments_gained || 0,
+      shares: row.total_shares_gained || 0,
+      engagement_rate: 0 // This will be calculated by the component
+    };
+  });
   
   console.log('fetchDailyAgg mapped data:', { count: mappedData.length, sample: mappedData[0] });
   return mappedData;

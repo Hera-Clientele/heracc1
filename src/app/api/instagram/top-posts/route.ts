@@ -1,5 +1,11 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+import timezone from 'dayjs/plugin/timezone';
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -7,29 +13,30 @@ const supabase = createClient(
 );
 
 function getDateRange(period: string) {
-  const now = new Date();
-  let from: Date | null = null;
-  let to: Date | null = null;
+  const now = dayjs().tz('America/New_York');
+  let from: string | null = null;
+  let to: string | null = null;
+  
   switch (period) {
     case 'today':
-      from = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      to = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+      from = now.format('YYYY-MM-DD');
+      to = now.add(1, 'day').format('YYYY-MM-DD');
       break;
     case 'yesterday':
-      from = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
-      to = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      from = now.subtract(1, 'day').format('YYYY-MM-DD');
+      to = now.format('YYYY-MM-DD');
       break;
     case '3days':
-      from = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 2);
-      to = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+      from = now.subtract(2, 'day').format('YYYY-MM-DD');
+      to = now.add(1, 'day').format('YYYY-MM-DD');
       break;
     case '7days':
-      from = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6);
-      to = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+      from = now.subtract(6, 'day').format('YYYY-MM-DD');
+      to = now.add(1, 'day').format('YYYY-MM-DD');
       break;
     case 'month':
-      from = new Date(now.getFullYear(), now.getMonth(), 1);
-      to = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+      from = now.startOf('month').format('YYYY-MM-DD');
+      to = now.endOf('month').add(1, 'day').format('YYYY-MM-DD');
       break;
     case 'all':
     default:
@@ -62,15 +69,20 @@ export async function GET(req: Request) {
     .limit(10);
 
   if (from && to) {
-    query = query.gte('created_at', from.toISOString()).lt('created_at', to.toISOString());
+    query = query.gte('created_at', `${from}T00:00:00`).lt('created_at', `${to}T00:00:00`);
   }
 
   const { data, error } = await query;
 
   if (error) {
+    console.error('Instagram top-posts API error:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  console.log('instagram top-posts API raw data:', data);
   console.log('instagram top-posts API returning:', { posts: data?.length || 0, sample: data?.[0] });
-  return NextResponse.json({ posts: data });
+  
+  // Ensure we return an array
+  const postsArray = Array.isArray(data) ? data : [];
+  return NextResponse.json({ posts: postsArray });
 } 
