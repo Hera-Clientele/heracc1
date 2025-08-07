@@ -45,10 +45,10 @@ export async function fetchDailyAgg(clientId: string): Promise<Row[]> {
       day: row.day,
       posts: row.total_posts_posted || 0,
       accounts: 0, // This might need to be calculated differently
-      views: row.total_views_gained || 0,
-      likes: row.total_likes_gained || 0,
-      comments: row.total_comments_gained || 0,
-      shares: row.total_shares_gained || 0,
+      views: row.total_views || 0,
+      likes: row.total_likes || 0,
+      comments: row.total_comments || 0,
+      shares: row.total_shares || 0,
       engagement_rate: 0 // This will be calculated by the component
     };
   });
