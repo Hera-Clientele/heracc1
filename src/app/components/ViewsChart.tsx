@@ -49,14 +49,31 @@ function getLastUpdateTime() {
 }
 
 export default function ViewsChart({ data }: { data: Row[] }) {
+  // Insert initial zero point for 2025-07-07
+  const initialDate = "2025-07-07";
+  const initialRow: Row = {
+    day: initialDate,
+    posts: 0,
+    accounts: 0,
+    views: 0,
+    likes: 0,
+    comments: 0,
+    shares: 0,
+    engagement_rate: 0,
+  };
+
   // Compute daily views gained per day
-  const dailyGains = data.map((row) => ({
-    day: row.day,
-    gain: row.views,
-  }));
+  const dailyViewsWithInitial = [initialRow, ...data];
+  const dailyGains = dailyViewsWithInitial.map((row, idx) => {
+    if (idx === 0) return { day: row.day, gain: 0 };
+    return {
+      day: row.day,
+      gain: row.views,
+    };
+  });
 
   // Compute daily posts
-  const dailyPostsData = data;
+  const dailyPostsWithInitial = [initialRow, ...data];
 
   // Get update times
   const lastUpdate = getLastUpdateTime();
@@ -66,6 +83,7 @@ export default function ViewsChart({ data }: { data: Row[] }) {
   const DailyGainTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       const gain = payload[0].value;
+      if (gain === 0 && label === initialDate) return null;
       return (
         <div className="bg-slate-900/90 p-3 rounded-lg shadow text-white border border-slate-700">
           <div className="font-semibold mb-1">{dayjs(label).tz('America/New_York').format("MMMM D")}</div>
@@ -80,6 +98,7 @@ export default function ViewsChart({ data }: { data: Row[] }) {
   const PostsTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       const posts = payload[0].value;
+      if (posts === 0 && label === initialDate) return null;
       return (
         <div className="bg-slate-900/90 p-3 rounded-lg shadow text-white border border-slate-700">
           <div className="font-semibold mb-1">{dayjs(label).tz('America/New_York').format("MMMM D")}</div>
@@ -113,7 +132,7 @@ export default function ViewsChart({ data }: { data: Row[] }) {
             <XAxis
               dataKey="day"
               tick={{ fontSize: 12 }}
-              tickFormatter={(date) => dayjs(date).tz('America/New_York').format("MM/DD")}
+              tickFormatter={(date) => date === initialDate ? "" : dayjs(date).tz('America/New_York').format("MM/DD")}
               interval="preserveStartEnd"
             />
             <YAxis tick={{ fontSize: 12 }} allowDecimals={false} domain={[0, 'auto']} tickFormatter={tick => tick === 0 ? '' : tick} />
@@ -140,7 +159,7 @@ export default function ViewsChart({ data }: { data: Row[] }) {
       <div>
         <div className="font-semibold text-lg mb-2 text-white">Daily Posts</div>
         <ResponsiveContainer width="100%" height={200}>
-          <LineChart data={dailyPostsData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+          <LineChart data={dailyPostsWithInitial} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
             <defs>
               <linearGradient id="colorPosts" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor="#10b981" stopOpacity={0.5}/>
@@ -151,7 +170,7 @@ export default function ViewsChart({ data }: { data: Row[] }) {
             <XAxis
               dataKey="day"
               tick={{ fontSize: 12 }}
-              tickFormatter={(date) => dayjs(date).tz('America/New_York').format("MM/DD")}
+              tickFormatter={(date) => date === initialDate ? "" : dayjs(date).tz('America/New_York').format("MM/DD")}
               interval="preserveStartEnd"
             />
             <YAxis tick={{ fontSize: 12 }} allowDecimals={false} domain={[0, 'auto']} tickFormatter={tick => tick === 0 ? '' : tick} />

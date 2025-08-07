@@ -22,7 +22,8 @@ import type { Row } from './lib/fetchDailyAgg';
 import type { AccountWithViews } from './lib/fetchAccountsWithViews';
 import { createClient } from '@supabase/supabase-js';
 import { fetchInstagramDailyAgg } from './lib/fetchInstagramDailyAgg';
-
+import InstagramWeeklyStats from './components/InstagramWeeklyStats';
+import TikTokWeeklyStats from './components/TikTokWeeklyStats';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
@@ -96,7 +97,7 @@ export default function Page() {
   
   // Global date range state
   const [dateRange, setDateRange] = useState<DateRange>({
-    startDate: '2025-08-03',
+    startDate: '2025-07-07',
     endDate: dayjs().tz('America/New_York').format('YYYY-MM-DD'),
     period: 'all'
   });
@@ -313,7 +314,13 @@ export default function Page() {
               )}
             </section>
             
-
+            {/* Weekly Statistics - Always use unfiltered data */}
+            {selectedPlatform === 'tiktok' && (
+              <TikTokWeeklyStats data={currentData} />
+            )}
+            {selectedPlatform === 'instagram' && (
+              <InstagramWeeklyStats data={currentData} />
+            )}
             
                     {/* Top Posts - Always use unfiltered data */}
         {selectedPlatform === 'tiktok' ? <TopPostsCard clientId={selectedClientId} /> : <InstagramTopPostsCard clientId={selectedClientId} />}
