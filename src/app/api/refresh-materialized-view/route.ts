@@ -31,10 +31,9 @@ export async function POST(req: NextRequest) {
 // GET endpoint to check refresh status
 export async function GET() {
   try {
-    const { data, error } = await supabase
+    const { count, error } = await supabase
       .from('mv_instagram_daily_totals')
-      .select('count(*)')
-      .limit(1);
+      .select('*', { count: 'exact', head: true });
     
     if (error) {
       return Response.json({ error: error.message }, { status: 500 });
@@ -42,7 +41,7 @@ export async function GET() {
     
     return Response.json({ 
       status: 'active',
-      recordCount: data?.[0]?.count || 0,
+      recordCount: count || 0,
       lastChecked: new Date().toISOString()
     });
   } catch (error: any) {
