@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
+import { getCachedData, setCachedData, cacheKeys, CACHE_TTL } from '../../../lib/redis';
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -61,6 +62,17 @@ export async function GET(req: Request) {
     return NextResponse.json({ posts: [] });
   }
 
+  // Try to get from cache first
+  const cacheKey = cacheKeys.topPosts(clientId, 'instagram', period);
+  const cachedData = await getCachedData(cacheKey);
+  
+  if (cachedData) {
+    console.log('Instagram top-posts API: Returning cached data');
+    return NextResponse.json({ posts: cachedData });
+  }
+
+  // If not in cache, fetch from database
+  console.log('Instagram top-posts API: Fetching fresh data');
   let query = supabase
     .from('v_latest_instagram')
     .select('video_id,username,url,created_at,views,post_caption')
@@ -84,5 +96,9 @@ export async function GET(req: Request) {
   
   // Ensure we return an array
   const postsArray = Array.isArray(data) ? data : [];
+  
+  // Cache the data
+  await setCachedData(cacheKey, postsArray, CACHE_TTL.TOP_POSTS);
+  
   return NextResponse.json({ posts: postsArray });
 } 

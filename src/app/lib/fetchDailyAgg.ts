@@ -19,11 +19,11 @@ const supabase = createClient(
 export async function fetchDailyAgg(clientId: string): Promise<Row[]> {
   console.log('fetchDailyAgg called with clientId:', clientId);
   
-  const { data, error } = await supabase
-    .from('tt_daily_agg')
-    .select('*')
-    .eq('client_id', parseInt(clientId, 10))
-    .order('day', { ascending: true });
+      const { data, error } = await supabase
+      .from('mv_tiktok_daily_totals')
+      .select('*')
+      .eq('client_id', parseInt(clientId, 10))
+      .order('day', { ascending: true });
     
   if (error) {
     console.error('fetchDailyAgg error:', error);

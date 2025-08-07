@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
+import { getCachedData, setCachedData, cacheKeys, CACHE_TTL } from '../../lib/redis';
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -40,6 +41,18 @@ export async function GET(req: NextRequest) {
       return Response.json({ error: 'Client ID is required' }, { status: 400 });
     }
 
+    // Try to get from cache first
+    const cacheKey = cacheKeys.todayPosts(clientId);
+    const cachedData = await getCachedData(cacheKey);
+    
+    if (cachedData) {
+      console.log('Today posts API: Returning cached data');
+      return Response.json(cachedData);
+    }
+
+    // If not in cache, fetch from database
+    console.log('Today posts API: Fetching fresh data');
+    
     // Get today's date in America/New_York timezone
     const today = dayjs().tz('America/New_York').format('YYYY-MM-DD');
     
@@ -91,12 +104,17 @@ export async function GET(req: NextRequest) {
       new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     );
 
-    return Response.json({ 
+    const responseData = { 
       data: allPosts,
       tiktokCount: tiktokPosts.length,
       instagramCount: instagramPosts.length,
       totalCount: allPosts.length
-    });
+    };
+
+    // Cache the data
+    await setCachedData(cacheKey, responseData, CACHE_TTL.TODAY_POSTS);
+
+    return Response.json(responseData);
   } catch (error: any) {
     console.error('API error:', error);
     return Response.json({ error: error.message }, { status: 500 });

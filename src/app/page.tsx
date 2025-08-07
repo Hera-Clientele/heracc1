@@ -17,7 +17,6 @@ import UnifiedAccountsCard from './components/UnifiedAccountsCard';
 import PlatformSelector, { Platform } from './components/PlatformSelector';
 import ClientSelector from './components/ClientSelector';
 import ContentQueueCard from './components/ContentQueueCard';
-import TodayPostsCard from './components/TodayPostsCard';
 import type { Row } from './lib/fetchDailyAgg';
 import type { AccountWithViews } from './lib/fetchAccountsWithViews';
 import { createClient } from '@supabase/supabase-js';
@@ -84,7 +83,7 @@ function formatDateRangeForDisplay(startDate: string, endDate: string, period: s
 }
 
 export default function Page() {
-  const [selectedClientId, setSelectedClientId] = useState<string>('1'); // Default to Katie Le (client_id: 1)
+  const [selectedClientId, setSelectedClientId] = useState<string>('all');
   const [selectedPlatform, setSelectedPlatform] = useState<Platform>('tiktok');
   const [tiktokData, setTiktokData] = useState<Row[]>([]);
   const [tiktokAccounts, setTiktokAccounts] = useState<AccountWithViews[]>([]);
@@ -197,7 +196,7 @@ export default function Page() {
     fetchAll();
     // Subscribe to real-time updates for all relevant tables/views
     const channels = [
-      supabase.channel('realtime:tt_daily_agg').on('postgres_changes', { event: '*', schema: 'public', table: 'tt_daily_agg' }, fetchAll),
+      supabase.channel('realtime:daily_agg').on('postgres_changes', { event: '*', schema: 'public', table: 'daily_agg' }, fetchAll),
       supabase.channel('realtime:accounts').on('postgres_changes', { event: '*', schema: 'public', table: 'accounts' }, fetchAll),
       supabase.channel('realtime:v_daily_video').on('postgres_changes', { event: '*', schema: 'public', table: 'v_daily_video' }, fetchAll),
       supabase.channel('realtime:v_daily_video_delta').on('postgres_changes', { event: '*', schema: 'public', table: 'v_daily_video_delta' }, fetchAll),
@@ -332,10 +331,7 @@ export default function Page() {
 
     {/* Content for Scheduled Posts platform */}
     {selectedPlatform === 'scheduled' && (
-      <>
-        <TodayPostsCard clientId={selectedClientId} />
-        <ContentQueueCard clientId={selectedClientId} />
-      </>
+      <ContentQueueCard clientId={selectedClientId} />
     )}
       </div>
     </main>

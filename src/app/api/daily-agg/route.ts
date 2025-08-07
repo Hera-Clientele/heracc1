@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { fetchDailyAgg } from '../../lib/fetchDailyAgg';
+import { getCachedData, setCachedData, cacheKeys, CACHE_TTL } from '../../lib/redis';
 
 export async function GET(req: NextRequest) {
   try {
@@ -19,8 +20,22 @@ export async function GET(req: NextRequest) {
       return Response.json({ data: [] });
     }
     
-    console.log('daily-agg API: Calling fetchDailyAgg...');
+    // Try to get from cache first
+    const cacheKey = cacheKeys.dailyAgg(clientId, 'tiktok');
+    const cachedData = await getCachedData(cacheKey);
+    
+    if (cachedData) {
+      console.log('TikTok daily-agg API: Returning cached data');
+      return Response.json({ data: cachedData });
+    }
+    
+    // If not in cache, fetch from database
+    console.log('TikTok daily-agg API: Fetching fresh data');
     const data = await fetchDailyAgg(clientId);
+    
+    // Cache the data
+    await setCachedData(cacheKey, data, CACHE_TTL.DAILY_AGG);
+    
     console.log('daily-agg API returning:', { count: data?.length || 0, sample: data?.[0] });
     return Response.json({ data });
   } catch (error: any) {

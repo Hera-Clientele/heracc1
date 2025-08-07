@@ -20,11 +20,13 @@ const supabase = createClient(
 export async function fetchInstagramDailyAgg(clientId: string): Promise<Row[]> {
   console.log('fetchInstagramDailyAgg called with clientId:', clientId);
   
+  const startTime = Date.now();
+  
   try {
     console.log('fetchInstagramDailyAgg: Creating Supabase query...');
     
     const { data, error } = await supabase
-      .from('v_instagram_totals_by_day')
+      .from('mv_instagram_daily_totals')
       .select('*')
       .eq('client_id', parseInt(clientId, 10))
       .order('day', { ascending: true });
@@ -49,6 +51,10 @@ export async function fetchInstagramDailyAgg(clientId: string): Promise<Row[]> {
       engagement_rate: 0 // This will be calculated by the component
     }));
     
+    const endTime = Date.now();
+    const duration = endTime - startTime;
+    
+    console.log(`fetchInstagramDailyAgg completed in ${duration}ms`);
     console.log('fetchInstagramDailyAgg mapped data:', { count: mappedData.length, sample: mappedData[0] });
     return mappedData;
   } catch (error) {
