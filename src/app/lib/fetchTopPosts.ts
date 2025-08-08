@@ -52,6 +52,34 @@ export async function fetchTopPosts(period: 'today' | 'yesterday' | '3days' | '7
 
   console.log('fetchTopPosts query params:', { period, clientId, from, to }); // Debug log
 
+  // For "today" period, check if materialized view has current day data
+  if (period === 'today') {
+    try {
+      // Check if materialized view has data for today
+      const today = new Date();
+      const todayEST = new Date(today.toLocaleString("en-US", {timeZone: "America/New_York"}));
+      const todayDate = todayEST.toISOString().split('T')[0];
+      
+      const { data: todayCheck, error: todayError } = await supabase
+        .from('mv_tiktok_top_posts_enhanced')
+        .select('created_at')
+        .eq('client_id', parseInt(clientId, 10))
+        .eq('period', 'today')
+        .gte('created_at', `${todayDate}T00:00:00`)
+        .lt('created_at', `${todayDate}T23:59:59`)
+        .limit(1);
+
+      // If no data for today in materialized view, use fallback
+      if (todayError || !todayCheck || todayCheck.length === 0) {
+        console.log('No today data in materialized view, using fallback for today...');
+        return fetchTopPostsFallback(period, clientId);
+      }
+    } catch (error) {
+      console.log('Error checking today data, using fallback...', error);
+      return fetchTopPostsFallback(period, clientId);
+    }
+  }
+
   // Check if enhanced materialized view exists and has data for this period
   try {
     const { data: testData, error: testError } = await supabase

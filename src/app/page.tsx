@@ -17,6 +17,8 @@ import UnifiedAccountsCard from './components/UnifiedAccountsCard';
 import PlatformSelector, { Platform } from './components/PlatformSelector';
 import ClientSelector from './components/ClientSelector';
 import ContentQueueCard from './components/ContentQueueCard';
+import MaterializedViewRefresher from './components/MaterializedViewRefresher';
+import { useMaterializedViewRefresh } from './hooks/useMaterializedViewRefresh';
 import type { Row } from './lib/fetchDailyAgg';
 import type { AccountWithViews } from './lib/fetchAccountsWithViews';
 import { createClient } from '@supabase/supabase-js';
@@ -93,6 +95,13 @@ export default function Page() {
   const [tiktokError, setTiktokError] = useState<string | null>(null);
   const [instagramError, setInstagramError] = useState<string | null>(null);
   const [instagramUniqueAccounts, setInstagramUniqueAccounts] = useState<number>(0);
+  
+  // Materialized view refresh hook - refreshes on page load if data is stale
+  const { isRefreshing, lastRefresh, refresh } = useMaterializedViewRefresh({
+    refreshOnMount: true,
+    maxAgeMinutes: 30, // Refresh if data is older than 30 minutes
+    silent: false // Show console logs
+  });
   
   // Global date range state
   const [dateRange, setDateRange] = useState<DateRange>({
@@ -261,6 +270,16 @@ export default function Page() {
           selectedPlatform={selectedPlatform} 
           onPlatformChange={setSelectedPlatform} 
         />
+        
+        {/* Materialized View Refresher - Only show when refreshing */}
+        {isRefreshing && (
+          <MaterializedViewRefresher 
+            showStatus={true}
+            onRefreshComplete={(result) => {
+              console.log('Materialized views refreshed, data should be fresh now');
+            }}
+          />
+        )}
         
         {/* Content for TikTok and Instagram platforms */}
         {selectedPlatform !== 'scheduled' && (

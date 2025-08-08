@@ -90,7 +90,7 @@ export default function TopPostsCard({ clientId }: TopPostsCardProps) {
                   </td>
                   <td className="px-4 py-2 text-center">{post.views.toLocaleString()}</td>
                   <td className="px-4 py-2 text-center">
-                    {post.created_at ? dayjs(post.created_at).tz('America/New_York').format('MM/DD/YYYY') : ''}
+                    {post.created_at ? dayjs(post.created_at).tz('America/New_York').format('MM/DD/YYYY h:mm A') : ''}
                   </td>
                 </tr>
               ))}
