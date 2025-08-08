@@ -10,30 +10,44 @@ export async function POST(req: NextRequest) {
   try {
     const startTime = Date.now();
     
-    // Refresh both materialized views
-    const [instagramResult, tiktokResult] = await Promise.all([
+    // Refresh all materialized views including enhanced top posts
+    const [instagramResult, tiktokResult, topPostsResult, enhancedTopPostsResult] = await Promise.all([
       supabase.rpc('manual_refresh_instagram_view'),
-      supabase.rpc('manual_refresh_tiktok_view')
+      supabase.rpc('manual_refresh_tiktok_view'),
+      supabase.rpc('refresh_all_top_posts'),
+      supabase.rpc('refresh_all_top_posts_enhanced')
     ]);
     
     const endTime = Date.now();
     const duration = endTime - startTime;
     
-    if (instagramResult.error || tiktokResult.error) {
-      console.error('Materialized view refresh errors:', { instagram: instagramResult.error, tiktok: tiktokResult.error });
+    if (instagramResult.error || tiktokResult.error || topPostsResult.error || enhancedTopPostsResult.error) {
+      console.error('Materialized view refresh errors:', { 
+        instagram: instagramResult.error, 
+        tiktok: tiktokResult.error,
+        topPosts: topPostsResult.error,
+        enhancedTopPosts: enhancedTopPostsResult.error 
+      });
       return Response.json({ 
         error: 'Failed to refresh materialized views',
-        details: { instagram: instagramResult.error, tiktok: tiktokResult.error }
+        details: { instagram: instagramResult.error, tiktok: tiktokResult.error, topPosts: topPostsResult.error, enhancedTopPosts: enhancedTopPostsResult.error }
       }, { status: 500 });
     }
     
-    console.log('All materialized views refreshed:', { instagram: instagramResult.data, tiktok: tiktokResult.data });
+    console.log('All materialized views refreshed:', { 
+      instagram: instagramResult.data, 
+      tiktok: tiktokResult.data,
+      topPosts: topPostsResult.data,
+      enhancedTopPosts: enhancedTopPostsResult.data 
+    });
     
     return Response.json({ 
       success: true, 
       message: 'All materialized views refreshed successfully',
       instagram: instagramResult.data,
       tiktok: tiktokResult.data,
+      topPosts: topPostsResult.data,
+      enhancedTopPosts: enhancedTopPostsResult.data,
       duration: `${duration}ms`,
       timestamp: new Date().toISOString()
     });
@@ -43,12 +57,16 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// GET endpoint to check status of both views
+// GET endpoint to check status of all views
 export async function GET() {
   try {
-    const [instagramCount, tiktokCount] = await Promise.all([
+    const [instagramCount, tiktokCount, tiktokTopPostsCount, instagramTopPostsCount, tiktokEnhancedCount, instagramEnhancedCount] = await Promise.all([
       supabase.from('mv_instagram_daily_totals').select('count(*)', { count: 'exact' }),
-      supabase.from('mv_tiktok_daily_totals').select('count(*)', { count: 'exact' })
+      supabase.from('mv_tiktok_daily_totals').select('count(*)', { count: 'exact' }),
+      supabase.from('mv_tiktok_top_posts').select('count(*)', { count: 'exact' }),
+      supabase.from('mv_instagram_top_posts').select('count(*)', { count: 'exact' }),
+      supabase.from('mv_tiktok_top_posts_enhanced').select('count(*)', { count: 'exact' }),
+      supabase.from('mv_instagram_top_posts_enhanced').select('count(*)', { count: 'exact' })
     ]);
     
     return Response.json({ 
@@ -60,6 +78,22 @@ export async function GET() {
       tiktok: {
         recordCount: tiktokCount.count || 0,
         error: tiktokCount.error
+      },
+      tiktokTopPosts: {
+        recordCount: tiktokTopPostsCount.count || 0,
+        error: tiktokTopPostsCount.error
+      },
+      instagramTopPosts: {
+        recordCount: instagramTopPostsCount.count || 0,
+        error: instagramTopPostsCount.error
+      },
+      tiktokEnhancedTopPosts: {
+        recordCount: tiktokEnhancedCount.count || 0,
+        error: tiktokEnhancedCount.error
+      },
+      instagramEnhancedTopPosts: {
+        recordCount: instagramEnhancedCount.count || 0,
+        error: instagramEnhancedCount.error
       },
       lastChecked: new Date().toISOString()
     });

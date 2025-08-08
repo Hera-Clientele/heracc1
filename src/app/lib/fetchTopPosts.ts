@@ -50,21 +50,74 @@ function getDateRange(period: 'today' | 'yesterday' | '3days' | '7days' | 'month
 export async function fetchTopPosts(period: 'today' | 'yesterday' | '3days' | '7days' | 'month' | 'all' = 'all', clientId?: string): Promise<TopPost[]> {
   const { from, to } = getDateRange(period);
 
-  // Use direct query instead of RPC function for debugging
+  console.log('fetchTopPosts query params:', { period, clientId, from, to }); // Debug log
+
+  // Check if enhanced materialized view exists and has data for this period
+  try {
+    const { data: testData, error: testError } = await supabase
+      .from('mv_tiktok_top_posts_enhanced')
+      .select('video_id, client_id, period')
+      .eq('client_id', parseInt(clientId, 10))
+      .eq('period', period)
+      .limit(1);
+
+    if (testError) {
+      console.log('Enhanced materialized view not available, using fallback...', testError);
+      return fetchTopPostsFallback(period, clientId);
+    }
+
+    if (!testData || testData.length === 0) {
+      console.log('Enhanced materialized view has no data for this period, using fallback...');
+      return fetchTopPostsFallback(period, clientId);
+    }
+
+    console.log('Enhanced materialized view is available and has data for period:', period);
+  } catch (error) {
+    console.log('Error checking enhanced materialized view, using fallback...', error);
+    return fetchTopPostsFallback(period, clientId);
+  }
+
+  // Use enhanced materialized view for pre-computed periods
+  let query = supabase
+    .from('mv_tiktok_top_posts_enhanced')
+    .select('video_id, username, url, views, post_caption, snapshot_date, created_at, client_id, rank, period')
+    .eq('client_id', parseInt(clientId, 10))
+    .eq('period', period)
+    .order('rank', { ascending: true })
+    .limit(10);
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error('fetchTopPosts enhanced materialized view error:', error);
+    // Fallback to original query if materialized view fails
+    console.log('Falling back to original latest_snapshots query...');
+    return fetchTopPostsFallback(period, clientId);
+  }
+  
+  console.log('fetchTopPosts enhanced materialized view result:', data?.length || 0, 'posts found'); // Debug log
+  console.log('fetchTopPosts first post:', data?.[0]); // Debug log
+  
+  // If materialized view returns no data, try fallback
+  if (!data || data.length === 0) {
+    console.log('Enhanced materialized view returned no data, trying fallback...');
+    return fetchTopPostsFallback(period, clientId);
+  }
+  
+  return data || [];
+}
+
+// Fallback function using original query
+async function fetchTopPostsFallback(period: 'today' | 'yesterday' | '3days' | '7days' | 'month' | 'all' = 'all', clientId?: string): Promise<TopPost[]> {
+  const { from, to } = getDateRange(period);
+
+  console.log('fetchTopPostsFallback query params:', { period, clientId, from, to }); // Debug log
+
   let query = supabase
     .from('latest_snapshots')
     .select('video_id, username, url, views, post_caption, snapshot_date, created_at, client_id')
     .order('views', { ascending: false })
     .limit(10);
-
-  // First, let's test without any filters to see if we can get any data
-  console.log('Testing query without filters first...');
-  const { data: allData, error: allError } = await supabase
-    .from('latest_snapshots')
-    .select('video_id, username, client_id')
-    .limit(5);
-  
-  console.log('All data test:', { count: allData?.length || 0, error: allError, sample: allData?.[0] });
 
   // Filter by client_id
   if (clientId) {
@@ -76,17 +129,15 @@ export async function fetchTopPosts(period: 'today' | 'yesterday' | '3days' | '7
     query = query.gte('created_at', from).lt('created_at', to);
   }
 
-  console.log('fetchTopPosts query params:', { period, clientId, from, to }); // Debug log
-
   const { data, error } = await query;
 
   if (error) {
-    console.error('fetchTopPosts error:', error);
+    console.error('fetchTopPosts fallback error:', error);
     throw error;
   }
   
-  console.log('fetchTopPosts result:', data?.length || 0, 'posts found'); // Debug log
-  console.log('fetchTopPosts first post:', data?.[0]); // Debug log
+  console.log('fetchTopPostsFallback result:', data?.length || 0, 'posts found'); // Debug log
+  console.log('fetchTopPostsFallback first post:', data?.[0]); // Debug log
   
   return data || [];
 } 

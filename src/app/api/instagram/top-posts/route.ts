@@ -73,18 +73,83 @@ export async function GET(req: Request) {
 
   // If not in cache, fetch from database
   console.log('Instagram top-posts API: Fetching fresh data');
-  let query = supabase
-    .from('v_latest_instagram')
-    .select('video_id,username,url,created_at,views,post_caption')
-    .eq('client_id', parseInt(clientId, 10))
-    .order('views', { ascending: false })
-    .limit(10);
+  
+  // Check if enhanced materialized view exists and has data for this period
+  try {
+    const { data: testData, error: testError } = await supabase
+      .from('mv_instagram_top_posts_enhanced')
+      .select('video_id, client_id, period')
+      .eq('client_id', parseInt(clientId, 10))
+      .eq('period', period)
+      .limit(1);
 
-  if (from && to) {
-    query = query.gte('created_at', `${from}T00:00:00`).lt('created_at', `${to}T00:00:00`);
+    if (testError) {
+      console.log('Enhanced materialized view not available, using fallback...', testError);
+      // Use fallback
+      let fallbackQuery = supabase
+        .from('v_latest_instagram')
+        .select('video_id,username,url,created_at,views,post_caption')
+        .eq('client_id', parseInt(clientId, 10))
+        .order('views', { ascending: false })
+        .limit(10);
+
+      if (from && to) {
+        fallbackQuery = fallbackQuery.gte('created_at', `${from}T00:00:00`).lt('created_at', `${to}T00:00:00`);
+      }
+
+      const fallbackResult = await fallbackQuery;
+      data = fallbackResult.data;
+      error = fallbackResult.error;
+    } else if (!testData || testData.length === 0) {
+      console.log('Enhanced materialized view has no data for this period, using fallback...');
+      // Use fallback
+      let fallbackQuery = supabase
+        .from('v_latest_instagram')
+        .select('video_id,username,url,created_at,views,post_caption')
+        .eq('client_id', parseInt(clientId, 10))
+        .order('views', { ascending: false })
+        .limit(10);
+
+      if (from && to) {
+        fallbackQuery = fallbackQuery.gte('created_at', `${from}T00:00:00`).lt('created_at', `${to}T00:00:00`);
+      }
+
+      const fallbackResult = await fallbackQuery;
+      data = fallbackResult.data;
+      error = fallbackResult.error;
+    } else {
+      console.log('Enhanced materialized view is available and has data for period:', period);
+      // Use enhanced materialized view
+      let query = supabase
+        .from('mv_instagram_top_posts_enhanced')
+        .select('video_id,username,url,created_at,views,post_caption,client_id,rank,period')
+        .eq('client_id', parseInt(clientId, 10))
+        .eq('period', period)
+        .order('rank', { ascending: true })
+        .limit(10);
+
+      const mvResult = await query;
+      data = mvResult.data;
+      error = mvResult.error;
+    }
+  } catch (error) {
+    console.log('Error checking enhanced materialized view, using fallback...', error);
+    // Use fallback
+    let fallbackQuery = supabase
+      .from('v_latest_instagram')
+      .select('video_id,username,url,created_at,views,post_caption')
+      .eq('client_id', parseInt(clientId, 10))
+      .order('views', { ascending: false })
+      .limit(10);
+
+    if (from && to) {
+      fallbackQuery = fallbackQuery.gte('created_at', `${from}T00:00:00`).lt('created_at', `${to}T00:00:00`);
+    }
+
+    const fallbackResult = await fallbackQuery;
+    data = fallbackResult.data;
+    error = fallbackResult.error;
   }
-
-  const { data, error } = await query;
 
   if (error) {
     console.error('Instagram top-posts API error:', error);
