@@ -84,7 +84,7 @@ export async function fetchTopPosts(period: 'today' | 'yesterday' | '3days' | '7
       const { data: todayCheck, error: todayError } = await supabase
         .from('mv_tiktok_top_posts_enhanced')
         .select('created_at')
-        .eq('client_id', parseInt(clientId, 10))
+        .eq('client_id', parseInt(clientId || '1', 10))
         .eq('period', 'today')
         .gte('created_at', `${todayDate}T00:00:00`)
         .lt('created_at', `${todayDate}T23:59:59`)
@@ -106,7 +106,7 @@ export async function fetchTopPosts(period: 'today' | 'yesterday' | '3days' | '7
     const { data: testData, error: testError } = await supabase
       .from('mv_tiktok_top_posts_enhanced')
       .select('video_id, client_id, period')
-      .eq('client_id', parseInt(clientId, 10))
+      .eq('client_id', parseInt(clientId || '1', 10))
       .eq('period', period)
       .limit(1);
 
@@ -130,7 +130,7 @@ export async function fetchTopPosts(period: 'today' | 'yesterday' | '3days' | '7
   let query = supabase
     .from('mv_tiktok_top_posts_enhanced')
     .select('video_id, username, url, views, post_caption, snapshot_date, created_at, client_id, rank, period')
-    .eq('client_id', parseInt(clientId, 10))
+    .eq('client_id', parseInt(clientId || '1', 10))
     .eq('period', period)
     .order('rank', { ascending: true })
     .limit(10);

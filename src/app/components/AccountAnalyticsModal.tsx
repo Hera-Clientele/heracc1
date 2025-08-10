@@ -1,6 +1,30 @@
 "use client";
 import React, { useEffect, useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
+import { Line } from 'react-chartjs-2';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend,
+  Filler
+} from 'chart.js';
+
+// Register Chart.js components
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend,
+  Filler
+);
 
 interface AccountAnalyticsModalProps {
   isOpen: boolean;
@@ -89,10 +113,10 @@ export default function AccountAnalyticsModal({ isOpen, onClose, account }: Acco
         dayData.comments += post.comments || 0;
       });
 
-      // Convert to array and sort by date (newest first)
+      // Convert to array and sort by date (oldest first for chart)
       const sortedAnalytics = Array.from(dailyData.values())
-        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-        .slice(0, 30); // Show last 30 days
+        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+        .slice(-30); // Show last 30 days
 
       setAnalytics(sortedAnalytics);
     } catch (err: any) {
@@ -102,11 +126,146 @@ export default function AccountAnalyticsModal({ isOpen, onClose, account }: Acco
     }
   }
 
+  // Prepare chart data
+  const chartData = {
+    labels: analytics.map(day => new Date(day.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })),
+    datasets: [
+      {
+        label: 'Posts',
+        data: analytics.map(day => day.posts),
+        borderColor: 'rgb(59, 130, 246)',
+        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+        tension: 0.4,
+        fill: true,
+        yAxisID: 'y-posts'
+      },
+      {
+        label: 'Views',
+        data: analytics.map(day => day.views),
+        borderColor: 'rgb(34, 197, 94)',
+        backgroundColor: 'rgba(34, 197, 94, 0.1)',
+        tension: 0.4,
+        fill: true,
+        yAxisID: 'y-views'
+      },
+      {
+        label: 'Likes',
+        data: analytics.map(day => day.likes),
+        borderColor: 'rgb(239, 68, 68)',
+        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+        tension: 0.4,
+        fill: true,
+        yAxisID: 'y-likes'
+      },
+      {
+        label: 'Comments',
+        data: analytics.map(day => day.comments),
+        borderColor: 'rgb(168, 85, 247)',
+        backgroundColor: 'rgba(168, 85, 247, 0.1)',
+        tension: 0.4,
+        fill: true,
+        yAxisID: 'y-comments'
+      }
+    ]
+  };
+
+  const chartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: {
+      mode: 'index' as const,
+      intersect: false,
+    },
+    plugins: {
+      legend: {
+        position: 'top' as const,
+        labels: {
+          color: 'rgb(156, 163, 175)',
+          usePointStyle: true,
+          padding: 20
+        }
+      },
+      tooltip: {
+        backgroundColor: 'rgba(24, 24, 27, 0.95)',
+        titleColor: 'rgb(255, 255, 255)',
+        bodyColor: 'rgb(156, 163, 175)',
+        borderColor: 'rgba(255, 255, 255, 0.1)',
+        borderWidth: 1,
+        cornerRadius: 8,
+        displayColors: true
+      }
+    },
+    scales: {
+      x: {
+        grid: {
+          color: 'rgba(255, 255, 255, 0.1)',
+        },
+        ticks: {
+          color: 'rgb(156, 163, 175)',
+          maxRotation: 45
+        }
+      },
+      'y-posts': {
+        type: 'linear' as const,
+        display: true,
+        position: 'left' as const,
+        grid: {
+          color: 'rgba(255, 255, 255, 0.1)',
+        },
+        ticks: {
+          color: 'rgb(156, 163, 175)',
+          callback: function(value: any) {
+            return value;
+          }
+        },
+        title: {
+          display: true,
+          text: 'Posts',
+          color: 'rgb(156, 163, 175)'
+        }
+      },
+      'y-views': {
+        type: 'linear' as const,
+        display: true,
+        position: 'right' as const,
+        grid: {
+          drawOnChartArea: false,
+          color: 'rgba(255, 255, 255, 0.1)',
+        },
+        ticks: {
+          color: 'rgb(156, 163, 175)',
+          callback: function(value: any) {
+            return value.toLocaleString();
+          }
+        },
+        title: {
+          display: true,
+          text: 'Views',
+          color: 'rgb(156, 163, 175)'
+        }
+      },
+      'y-likes': {
+        type: 'linear' as const,
+        display: false,
+        grid: {
+          drawOnChartArea: false,
+        }
+      },
+      'y-comments': {
+        type: 'linear' as const,
+        display: false,
+        grid: {
+          drawOnChartArea: false,
+        }
+      }
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-[#18181b] border border-white/10 rounded-2xl shadow-xl max-w-4xl w-full max-h-[80vh] overflow-hidden">
+      <div className="bg-[#18181b] border border-white/10 rounded-2xl shadow-xl max-w-6xl w-full max-h-[90vh] overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-white/10">
           <div>
@@ -128,7 +287,7 @@ export default function AccountAnalyticsModal({ isOpen, onClose, account }: Acco
         </div>
 
         {/* Content */}
-        <div className="p-6 overflow-y-auto max-h-[60vh]">
+        <div className="p-6 overflow-y-auto max-h-[70vh]">
           {loading ? (
             <div className="text-slate-300 py-8 text-center">Loading analytics...</div>
           ) : error ? (
@@ -136,9 +295,9 @@ export default function AccountAnalyticsModal({ isOpen, onClose, account }: Acco
           ) : analytics.length === 0 ? (
             <div className="text-slate-300 py-8 text-center">No analytics data found</div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-6">
               {/* Summary Stats */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div className="bg-white/5 border border-white/10 rounded-lg p-4">
                   <div className="text-slate-400 text-sm">Total Posts</div>
                   <div className="text-2xl font-bold text-white">
@@ -165,36 +324,66 @@ export default function AccountAnalyticsModal({ isOpen, onClose, account }: Acco
                 </div>
               </div>
 
-              {/* Daily Analytics Table */}
-              <div className="bg-white/5 border border-white/10 rounded-lg overflow-hidden">
-                <table className="w-full text-white">
-                  <thead className="bg-[#27272a] border-b border-white/10">
-                    <tr className="text-slate-200 text-xs font-semibold uppercase tracking-wider">
-                      <th className="px-4 py-3 text-left">Date</th>
-                      <th className="px-4 py-3 text-center">Posts</th>
-                      <th className="px-4 py-3 text-center">Views</th>
-                      <th className="px-4 py-3 text-center">Likes</th>
-                      <th className="px-4 py-3 text-center">Comments</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {analytics.map((day) => (
-                      <tr key={day.date} className="hover:bg-white/5 transition">
-                        <td className="px-4 py-3 text-white">
-                          {new Date(day.date).toLocaleDateString('en-US', {
-                            month: 'short',
-                            day: 'numeric',
-                            year: 'numeric'
-                          })}
-                        </td>
-                        <td className="px-4 py-3 text-center text-white">{day.posts}</td>
-                        <td className="px-4 py-3 text-center text-white">{day.views.toLocaleString()}</td>
-                        <td className="px-4 py-3 text-center text-white">{day.likes.toLocaleString()}</td>
-                        <td className="px-4 py-3 text-center text-white">{day.comments.toLocaleString()}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              {/* Charts */}
+              <div className="space-y-6">
+                {/* Main Combined Chart */}
+                <div className="bg-white/5 border border-white/10 rounded-lg p-6">
+                  <h3 className="text-lg font-semibold text-white mb-4">Performance Over Time</h3>
+                  <div className="h-80">
+                    <Line data={chartData} options={chartOptions} />
+                  </div>
+                </div>
+
+                {/* Individual Metric Charts */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Posts Chart */}
+                  <div className="bg-white/5 border border-white/10 rounded-lg p-4">
+                    <h4 className="text-md font-semibold text-white mb-3">Daily Posts</h4>
+                    <div className="h-48">
+                      <Line 
+                        data={{
+                          labels: chartData.labels,
+                          datasets: [chartData.datasets[0]]
+                        }} 
+                        options={{
+                          ...chartOptions,
+                          scales: {
+                            x: chartOptions.scales.x,
+                            y: {
+                              ...chartOptions.scales['y-posts'],
+                              display: true,
+                              position: 'left'
+                            }
+                          }
+                        }} 
+                      />
+                    </div>
+                  </div>
+
+                  {/* Views Chart */}
+                  <div className="bg-white/5 border border-white/10 rounded-lg p-4">
+                    <h4 className="text-md font-semibold text-white mb-3">Daily Views</h4>
+                    <div className="h-48">
+                      <Line 
+                        data={{
+                          labels: chartData.labels,
+                          datasets: [chartData.datasets[1]]
+                        }} 
+                        options={{
+                          ...chartOptions,
+                          scales: {
+                            x: chartOptions.scales.x,
+                            y: {
+                              ...chartOptions.scales['y-views'],
+                              display: true,
+                              position: 'left'
+                            }
+                          }
+                        }} 
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           )}

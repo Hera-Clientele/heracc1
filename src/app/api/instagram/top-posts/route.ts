@@ -231,7 +231,8 @@ export async function GET(req: Request) {
 
     if (error) {
       console.error('Instagram top-posts API error:', error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      return NextResponse.json({ error: errorMessage }, { status: 500 });
     }
 
     console.log('instagram top-posts API raw data:', data);
@@ -246,6 +247,7 @@ export async function GET(req: Request) {
     return NextResponse.json({ posts: postsArray });
   } catch (error) {
     console.error('Instagram top-posts API error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 } 
