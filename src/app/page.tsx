@@ -12,7 +12,7 @@ import AccountsCard from './components/AccountsCard';
 import InstagramStatsGrid from './components/InstagramStatsGrid';
 import InstagramViewsChart from './components/InstagramViewsChart';
 import InstagramTopPostsCard from './components/InstagramTopPostsCard';
-import InstagramAccountsCard from './components/InstagramAccountsCard';
+// InstagramAccountsCard is no longer used - using UnifiedAccountsCard instead
 import UnifiedAccountsCard from './components/UnifiedAccountsCard';
 import PlatformSelector, { Platform } from './components/PlatformSelector';
 import ClientSelector from './components/ClientSelector';

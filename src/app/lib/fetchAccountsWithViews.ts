@@ -63,11 +63,17 @@ export async function fetchAccountsWithViews(platform?: 'tiktok' | 'instagram', 
     const transformedData = (data || []).map(account => ({
       username: account.username,
       profile_url: account.profile_url || '',
+      // Map views to match component interface
+      views: account.views_count_total || 0,
       highest_view_post: account.views_count_total || 0,
       post_count: account.media_count || 0,
+      posts: account.media_count || 0, // Add this for component compatibility
       average_views: account.media_count && account.views_count_total 
         ? Math.floor(account.views_count_total / account.media_count) 
         : 0,
+      avg_views: account.media_count && account.views_count_total 
+        ? Math.floor(account.views_count_total / account.media_count) 
+        : 0, // Add this for component compatibility
       followers: account.followers_count || 0,
       platform: account.platform,
       display_name: account.display_name,
@@ -82,6 +88,9 @@ export async function fetchAccountsWithViews(platform?: 'tiktok' | 'instagram', 
       profile_views: account.profile_views,
       reach_count: account.reach_count,
       last_updated: account.last_updated,
+      // Add likes and comments for component compatibility
+      likes: account.likes_count_total || 0,
+      comments: account.comments_count_total || 0,
     }));
     
     console.log('fetchAccountsWithViews transformed result:', { count: transformedData.length, sample: transformedData[0] });

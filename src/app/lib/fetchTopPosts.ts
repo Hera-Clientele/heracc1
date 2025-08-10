@@ -19,6 +19,14 @@ function getDateRange(period: 'today' | 'yesterday' | '3days' | '7days' | 'month
   // Get current date in Eastern Time
   const now = new Date();
   const estDate = new Date(now.toLocaleString("en-US", {timeZone: "America/New_York"}));
+  
+  // Create dates in EST timezone without UTC conversion
+  const createESTDate = (year: number, month: number, day: number) => {
+    // Create date string in EST format and parse it
+    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    return new Date(`${dateStr}T00:00:00-05:00`); // EST timezone offset
+  };
+  
   const estYear = estDate.getFullYear();
   const estMonth = estDate.getMonth();
   const estDay = estDate.getDate();
@@ -27,23 +35,36 @@ function getDateRange(period: 'today' | 'yesterday' | '3days' | '7days' | 'month
   let to: Date | null = null;
   
   if (period === 'today') {
-    // Today in EST
-    from = new Date(Date.UTC(estYear, estMonth, estDay));
-    to = new Date(Date.UTC(estYear, estMonth, estDay + 1));
+    // Today in EST - from start of today to start of tomorrow
+    from = createESTDate(estYear, estMonth, estDay);
+    to = createESTDate(estYear, estMonth, estDay + 1);
   } else if (period === 'yesterday') {
     // Yesterday in EST
-    from = new Date(Date.UTC(estYear, estMonth, estDay - 1));
-    to = new Date(Date.UTC(estYear, estMonth, estDay));
+    from = createESTDate(estYear, estMonth, estDay - 1);
+    to = createESTDate(estYear, estMonth, estDay);
   } else if (period === '3days') {
-    from = new Date(Date.UTC(estYear, estMonth, estDay - 2));
-    to = new Date(Date.UTC(estYear, estMonth, estDay + 1));
+    from = createESTDate(estYear, estMonth, estDay - 2);
+    to = createESTDate(estYear, estMonth, estDay + 1);
   } else if (period === '7days') {
-    from = new Date(Date.UTC(estYear, estMonth, estDay - 6));
-    to = new Date(Date.UTC(estYear, estMonth, estDay + 1));
+    from = createESTDate(estYear, estMonth, estDay - 6);
+    to = createESTDate(estYear, estMonth, estDay + 1);
   } else if (period === 'month') {
-    from = new Date(Date.UTC(estYear, estMonth, 1));
-    to = new Date(Date.UTC(estYear, estMonth + 1, 1));
+    from = createESTDate(estYear, estMonth, 1);
+    to = createESTDate(estYear, estMonth + 1, 1);
   }
+  
+  // Debug logging
+  console.log('getDateRange debug:', {
+    period,
+    now: now.toISOString(),
+    estDate: estDate.toISOString(),
+    estYear,
+    estMonth,
+    estDay,
+    from: from?.toISOString(),
+    to: to?.toISOString()
+  });
+  
   return { from: from ? from.toISOString() : null, to: to ? to.toISOString() : null };
 }
 

@@ -1,59 +1,17 @@
 "use client";
-import React, { useEffect, useState } from 'react';
+import React from 'react';
+import type { AccountWithViews } from '../lib/fetchAccountsWithViews';
 
-interface InstagramAccount {
-  username: string;
-  profile_url: string;
-  views: number;
-  likes: number;
-  comments: number;
-  posts: number;
-  highest_view_post: number;
-  avg_views: number;
-  followers?: number;
-  display_name?: string;
-  bio?: string;
-  account_niche?: string;
-  pfp_url?: string;
-  account_status?: string;
-  last_updated?: string;
+interface InstagramAccountsCardProps {
+  accounts: AccountWithViews[];
 }
 
-export default function InstagramAccountsCard() {
-  const [accounts, setAccounts] = useState<InstagramAccount[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    async function fetchAccounts() {
-      try {
-        const res = await fetch('/api/accounts?platform=instagram', { cache: 'no-store' });
-        if (!res.ok) throw new Error('Failed to fetch Instagram accounts');
-        const data = await res.json();
-        setAccounts(data.accounts || []);
-      } catch (err: any) {
-        setError(err.message || 'Error fetching Instagram accounts');
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchAccounts();
-  }, []);
-
-  if (loading) {
+export default function InstagramAccountsCard({ accounts }: InstagramAccountsCardProps) {
+  if (!accounts || accounts.length === 0) {
     return (
       <div className="backdrop-blur-md bg-white/5 border border-white/10 rounded-2xl shadow-xl p-6 mt-6">
         <h2 className="text-xl font-semibold text-white mb-4">Instagram Accounts</h2>
-        <div className="text-slate-300 py-8 text-center">Loading...</div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="backdrop-blur-md bg-white/5 border border-white/10 rounded-2xl shadow-xl p-6 mt-6">
-        <h2 className="text-xl font-semibold text-white mb-4">Instagram Accounts</h2>
-        <div className="text-red-400 py-8 text-center">{error}</div>
+        <div className="text-slate-300 py-8 text-center">No Instagram accounts found</div>
       </div>
     );
   }
@@ -108,9 +66,9 @@ export default function InstagramAccountsCard() {
                   </span>
                 </td>
                 <td className="px-4 py-2 text-center">{account.followers?.toLocaleString() || 'N/A'}</td>
-                <td className="px-4 py-2 text-center">{account.views.toLocaleString()}</td>
-                <td className="px-4 py-2 text-center">{account.posts}</td>
-                <td className="px-4 py-2 text-center">{account.avg_views.toLocaleString()}</td>
+                <td className="px-4 py-2 text-center">{account.views_count_total?.toLocaleString() || 'N/A'}</td>
+                <td className="px-4 py-2 text-center">{account.post_count}</td>
+                <td className="px-4 py-2 text-center">{account.average_views.toLocaleString()}</td>
               </tr>
             ))}
           </tbody>
