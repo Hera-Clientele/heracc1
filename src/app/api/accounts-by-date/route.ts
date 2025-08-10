@@ -25,9 +25,9 @@ export async function GET(request: NextRequest) {
     let uniqueUsernames: string[] = [];
 
     if (platform === 'tiktok') {
-      // Query latest_snapshots for TikTok accounts that posted content within the date range
+      // Use the enhanced materialized view for TikTok instead of latest_snapshots
       const { data, error } = await supabase
-        .from('latest_snapshots')
+        .from('mv_tiktok_top_posts_enhanced')
         .select('username')
         .eq('client_id', clientId)
         .gte('created_at', `${startDate}T00:00:00`)
@@ -35,15 +35,28 @@ export async function GET(request: NextRequest) {
         .not('username', 'is', null);
 
       if (error) {
-        console.error('Supabase error:', error);
-        return NextResponse.json({ error: 'Failed to fetch TikTok accounts' }, { status: 500 });
-      }
+        console.error('Supabase error with materialized view:', error);
+        // Fallback to latest_snapshots if materialized view fails
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from('latest_snapshots')
+          .select('username')
+          .eq('client_id', clientId)
+          .gte('created_at', `${startDate}T00:00:00`)
+          .lte('created_at', `${endDate}T23:59:59`)
+          .not('username', 'is', null);
 
-      uniqueUsernames = [...new Set(data.map(row => row.username))];
+        if (fallbackError) {
+          console.error('Fallback query also failed:', fallbackError);
+          return NextResponse.json({ error: 'Failed to fetch TikTok accounts' }, { status: 500 });
+        }
+        uniqueUsernames = [...new Set(fallbackData.map(row => row.username))];
+      } else {
+        uniqueUsernames = [...new Set(data.map(row => row.username))];
+      }
     } else if (platform === 'instagram') {
-      // Query v_latest_instagram for Instagram accounts that posted content within the date range
+      // Use the enhanced materialized view for Instagram instead of v_latest_instagram
       const { data, error } = await supabase
-        .from('v_latest_instagram')
+        .from('mv_instagram_top_posts_enhanced')
         .select('username')
         .eq('client_id', clientId)
         .gte('created_at', `${startDate}T00:00:00`)
@@ -51,11 +64,24 @@ export async function GET(request: NextRequest) {
         .not('username', 'is', null);
 
       if (error) {
-        console.error('Supabase error:', error);
-        return NextResponse.json({ error: 'Failed to fetch Instagram accounts' }, { status: 500 });
-      }
+        console.error('Supabase error with materialized view:', error);
+        // Fallback to v_latest_instagram if materialized view fails
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from('v_latest_instagram')
+          .select('username')
+          .eq('client_id', clientId)
+          .gte('created_at', `${startDate}T00:00:00`)
+          .lte('created_at', `${endDate}T23:59:59`)
+          .not('username', 'is', null);
 
-      uniqueUsernames = [...new Set(data.map(row => row.username))];
+        if (fallbackError) {
+          console.error('Fallback query also failed:', fallbackError);
+          return NextResponse.json({ error: 'Failed to fetch Instagram accounts' }, { status: 500 });
+        }
+        uniqueUsernames = [...new Set(fallbackData.map(row => row.username))];
+      } else {
+        uniqueUsernames = [...new Set(data.map(row => row.username))];
+      }
     }
 
     const uniqueCount = uniqueUsernames.length;
