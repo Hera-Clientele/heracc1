@@ -44,6 +44,17 @@ interface DailyAnalytics {
   comments: number;
 }
 
+interface AccountHealth {
+  views_7d_avg: number;
+  views_yesterday: number;
+  engagement_rate: number;
+  total_followers: number;
+  follower_growth_7d: number;
+  shadowban_flag: boolean;
+  failed_post_streak: number;
+  last_successful_post: string | null;
+}
+
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -51,14 +62,115 @@ const supabase = createClient(
 
 export default function AccountAnalyticsModal({ isOpen, onClose, account }: AccountAnalyticsModalProps) {
   const [analytics, setAnalytics] = useState<DailyAnalytics[]>([]);
+  const [accountHealth, setAccountHealth] = useState<AccountHealth | null>(null);
   const [loading, setLoading] = useState(true);
+  const [healthLoading, setHealthLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedPeriod, setSelectedPeriod] = useState(30); // Default to 30 days
 
   useEffect(() => {
     if (isOpen && account) {
       fetchAccountAnalytics();
+      fetchAccountHealth();
     }
-  }, [isOpen, account]);
+  }, [isOpen, account, selectedPeriod]);
+
+  async function fetchAccountHealth() {
+    try {
+      setHealthLoading(true);
+      console.log('Fetching account health for:', account.username, 'platform:', account.platform, 'client:', account.client_id);
+      
+      // Check if we have the right data structure
+      if (!account.username || !account.client_id || !account.platform) {
+        console.error('Missing username, platform, or client_id in account object');
+        setHealthLoading(false);
+        return;
+      }
+      
+      // Use the API endpoint instead of direct Supabase call
+      const response = await fetch(
+        `/api/account-health?platform=${account.platform}&clientId=${account.client_id}&username=${account.username}`,
+        { cache: 'no-store' }
+      );
+      
+      if (!response.ok) {
+        console.error('API error:', response.status, response.statusText);
+        // Set empty health data so the UI doesn't break
+        setAccountHealth({
+          views_7d_avg: 0,
+          views_yesterday: 0,
+          engagement_rate: 0,
+          total_followers: 0,
+          follower_growth_7d: 0,
+          shadowban_flag: false,
+          failed_post_streak: 0,
+          last_successful_post: null
+        });
+        setHealthLoading(false);
+        return;
+      }
+      
+      const result = await response.json();
+      console.log('Account health API response:', result);
+      
+      if (result.health && result.health.length > 0) {
+        // Find the specific account's health data
+        const accountHealthData = result.health.find((h: any) => h.username === account.username);
+        if (accountHealthData) {
+          // Use the data directly from the table
+          setAccountHealth({
+            views_7d_avg: accountHealthData.views_7d_avg || 0,
+            views_yesterday: accountHealthData.views_yesterday || 0,
+            engagement_rate: accountHealthData.engagement_rate || 0,
+            total_followers: accountHealthData.total_followers || 0,
+            follower_growth_7d: accountHealthData.follower_growth_7d || 0,
+            shadowban_flag: accountHealthData.shadowban_flag || false,
+            failed_post_streak: accountHealthData.failed_post_streak || 0,
+            last_successful_post: accountHealthData.last_successful_post || null
+          });
+        } else {
+          console.log('No health data found for specific account:', account.username);
+          setAccountHealth({
+            views_7d_avg: 0,
+            views_yesterday: 0,
+            engagement_rate: 0,
+            total_followers: 0,
+            follower_growth_7d: 0,
+            shadowban_flag: false,
+            failed_post_streak: 0,
+            last_successful_post: null
+          });
+        }
+      } else {
+        console.log('No account health data found');
+        setAccountHealth({
+          views_7d_avg: 0,
+          views_yesterday: 0,
+          engagement_rate: 0,
+          total_followers: 0,
+          follower_growth_7d: 0,
+          shadowban_flag: false,
+          failed_post_streak: 0,
+          last_successful_post: null
+        });
+      }
+    } catch (err) {
+      console.error('Exception fetching account health:', err);
+      // Set empty health data on any error
+      setAccountHealth({
+        views_7d_avg: 0,
+        views_yesterday: 0,
+        engagement_rate: 0,
+        total_followers: 0,
+        follower_growth_7d: 0,
+        shadowban_flag: false,
+        failed_post_streak: 0,
+        last_successful_post: null
+      });
+    } finally {
+      setHealthLoading(false);
+    }
+  }
 
   async function fetchAccountAnalytics() {
     try {
@@ -116,7 +228,7 @@ export default function AccountAnalyticsModal({ isOpen, onClose, account }: Acco
       // Convert to array and sort by date (oldest first for chart)
       const sortedAnalytics = Array.from(dailyData.values())
         .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-        .slice(-30); // Show last 30 days
+        .slice(-selectedPeriod); // Show selected period
 
       setAnalytics(sortedAnalytics);
     } catch (err: any) {
@@ -216,7 +328,7 @@ export default function AccountAnalyticsModal({ isOpen, onClose, account }: Acco
               Analytics for @{account.username}
             </h2>
             <p className="text-slate-400 text-sm">
-              Daily performance over the last 30 days
+              Daily performance over the last {selectedPeriod} days
             </p>
           </div>
           <button
@@ -230,7 +342,7 @@ export default function AccountAnalyticsModal({ isOpen, onClose, account }: Acco
         </div>
 
         {/* Content */}
-        <div className="p-6 overflow-y-auto max-h-[70vh]">
+                      <div className="p-6 overflow-y-auto max-h-[70vh] scrollbar-hide">
           {loading ? (
             <div className="text-slate-300 py-8 text-center">Loading analytics...</div>
           ) : error ? (
@@ -239,6 +351,69 @@ export default function AccountAnalyticsModal({ isOpen, onClose, account }: Acco
             <div className="text-slate-300 py-8 text-center">No analytics data found</div>
           ) : (
             <div className="space-y-6">
+              {/* Account Health Metrics */}
+              {healthLoading ? (
+                <div className="text-slate-300 py-8 text-center">Loading account health...</div>
+              ) : accountHealth ? (
+                <div>
+                  <h3 className="text-lg font-semibold text-white mb-4">Account Health</h3>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                    <div className="bg-white/5 border border-white/10 rounded-lg p-4">
+                      <div className="text-slate-400 text-sm">7-Day Avg Views</div>
+                      <div className="text-2xl font-bold text-white">
+                        {accountHealth.views_7d_avg?.toLocaleString() || '0'}
+                      </div>
+                    </div>
+                    <div className="bg-white/5 border border-white/10 rounded-lg p-4">
+                      <div className="text-slate-400 text-sm">Yesterday Views</div>
+                      <div className="text-2xl font-bold text-white">
+                        {accountHealth.views_yesterday?.toLocaleString() || '0'}
+                      </div>
+                    </div>
+                    <div className="bg-white/5 border border-white/10 rounded-lg p-4">
+                      <div className="text-slate-400 text-sm">Engagement Rate</div>
+                      <div className="text-2xl font-bold text-white">
+                        {accountHealth.engagement_rate ? `${(accountHealth.engagement_rate * 100).toFixed(2)}%` : '0%'}
+                      </div>
+                    </div>
+                    <div className="bg-white/5 border border-white/10 rounded-lg p-4">
+                      <div className="text-slate-400 text-sm">Total Followers</div>
+                      <div className="text-2xl font-bold text-white">
+                        {accountHealth.total_followers?.toLocaleString() || '0'}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="bg-white/5 border border-white/10 rounded-lg p-4">
+                      <div className="text-slate-400 text-sm">Follower Growth (7d)</div>
+                      <div className={`text-2xl font-bold ${accountHealth.follower_growth_7d >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                        {accountHealth.follower_growth_7d >= 0 ? '+' : ''}{accountHealth.follower_growth_7d?.toLocaleString() || '0'}
+                      </div>
+                    </div>
+                    <div className="bg-white/5 border border-white/10 rounded-lg p-4">
+                      <div className="text-slate-400 text-sm">Failed Post Streak</div>
+                      <div className={`text-2xl font-bold ${accountHealth.failed_post_streak > 0 ? 'text-red-400' : 'text-green-400'}`}>
+                        {accountHealth.failed_post_streak || '0'}
+                      </div>
+                    </div>
+                    <div className="bg-white/5 border border-white/10 rounded-lg p-4">
+                      <div className="text-slate-400 text-sm">Last Successful Post</div>
+                      <div className="text-2xl font-bold text-white">
+                        {accountHealth.last_successful_post ? new Date(accountHealth.last_successful_post).toLocaleDateString() : 'Never'}
+                      </div>
+                    </div>
+                    <div className="bg-white/5 border border-white/10 rounded-lg p-4">
+                      <div className="text-slate-400 text-sm">Shadowban Status</div>
+                      <div className={`text-2xl font-bold ${accountHealth.shadowban_flag ? 'text-red-400' : 'text-green-400'}`}>
+                        {accountHealth.shadowban_flag ? '⚠️ Shadowbanned' : '✅ Healthy'}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-slate-300 py-8 text-center">No account health data found.</div>
+              )}
+
               {/* Summary Stats */}
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div className="bg-white/5 border border-white/10 rounded-lg p-4">
@@ -264,6 +439,32 @@ export default function AccountAnalyticsModal({ isOpen, onClose, account }: Acco
                   <div className="text-2xl font-bold text-white">
                     {analytics.reduce((sum, day) => sum + day.comments, 0).toLocaleString()}
                   </div>
+                </div>
+              </div>
+
+              {/* Date Filter */}
+              <div className="bg-white/5 border border-white/10 rounded-lg p-4">
+                <h3 className="text-md font-semibold text-white mb-3">Date Range</h3>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { label: 'Last 7 Days', days: 7 },
+                    { label: 'Last 14 Days', days: 14 },
+                    { label: 'Last 30 Days', days: 30 },
+                    { label: 'Last 60 Days', days: 60 },
+                    { label: 'Last 90 Days', days: 90 }
+                  ].map((period) => (
+                    <button
+                      key={period.days}
+                      onClick={() => setSelectedPeriod(period.days)}
+                      className={`px-3 py-2 text-sm rounded-lg transition-colors ${
+                        selectedPeriod === period.days
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-white/10 text-slate-300 hover:bg-white/20'
+                      }`}
+                    >
+                      {period.label}
+                    </button>
+                  ))}
                 </div>
               </div>
 

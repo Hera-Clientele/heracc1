@@ -31,6 +31,7 @@ export default function UnifiedAccountsCard({ platform, clientId }: UnifiedAccou
         setLoading(false);
       }
     }
+
     fetchAccounts();
   }, [platform, clientId]);
 
@@ -42,6 +43,24 @@ export default function UnifiedAccountsCard({ platform, clientId }: UnifiedAccou
     });
     setIsAnalyticsModalOpen(true);
   };
+
+  // const getAccountHealth = (username: string) => { // This function is removed
+  //   const health = accountHealth.find(health => health.username === username);
+  //   if (!health) return null;
+    
+  //   // Return the health data with proper fallbacks
+  //   return {
+  //     username: health.username,
+  //     views_7d_avg: health.views_7d_avg || 0,
+  //     views_yesterday: health.views_yesterday || 0,
+  //     engagement_rate: health.engagement_rate || 0,
+  //     total_followers: health.total_followers || 0,
+  //     follower_growth_7d: health.follower_growth_7d || 0,
+  //     shadowban_flag: health.shadowban_flag || false,
+  //     failed_post_streak: health.failed_post_streak || 0,
+  //     last_successful_post: health.last_successful_post || null
+  //   };
+  // };
 
   if (loading) {
     return (
@@ -71,13 +90,13 @@ export default function UnifiedAccountsCard({ platform, clientId }: UnifiedAccou
         <div className="overflow-x-auto max-h-[64rem] overflow-y-auto scrollbar-hide">
           <table className="min-w-full text-white">
             <thead className="sticky top-0 bg-[#18181b] border-b border-slate-700 z-10">
-              <tr className="text-slate-200 text-xs font-semibold uppercase tracking-wider">
-                <th className="px-4 py-3 text-left">Username</th>
-                <th className="px-4 py-3 text-center">Status</th>
-                <th className="px-4 py-3 text-center">Followers</th>
-                <th className="px-4 py-3 text-center">Total Views</th>
-                <th className="px-4 py-3 text-center">Posts</th>
-                <th className="px-4 py-3 text-center">Avg Views</th>
+              <tr className="border-b border-slate-700 text-slate-300 text-sm">
+                <th className="px-4 py-3 text-left font-medium">Account</th>
+                <th className="px-4 py-3 text-center font-medium">Status</th>
+                <th className="px-4 py-3 text-center font-medium">Followers</th>
+                <th className="px-4 py-3 text-center font-medium">Total Views</th>
+                <th className="px-4 py-3 text-center font-medium">Posts</th>
+                <th className="px-4 py-3 text-center font-medium">Avg Views</th>
               </tr>
             </thead>
             <tbody>

@@ -18,6 +18,7 @@ import PlatformSelector, { Platform } from './components/PlatformSelector';
 import ClientSelector from './components/ClientSelector';
 import ContentQueueCard from './components/ContentQueueCard';
 import MaterializedViewRefresher from './components/MaterializedViewRefresher';
+import MaterializedViewsRefresher from './components/AccountHealthRefresher';
 import { useMaterializedViewRefresh } from './hooks/useMaterializedViewRefresh';
 import type { Row } from './lib/fetchDailyAgg';
 import type { AccountWithViews } from './lib/fetchAccountsWithViews';
@@ -98,10 +99,29 @@ export default function Page() {
   
   // Materialized view refresh hook - refreshes on page load if data is stale
   const { isRefreshing, lastRefresh, refresh } = useMaterializedViewRefresh({
-    refreshOnMount: true,
-    maxAgeMinutes: 30, // Refresh if data is older than 30 minutes
-    silent: false // Show console logs
+    refreshInterval: 60, // 1 hour in minutes
+    refreshOnMount: true
   });
+
+  // Function to refresh all materialized views
+  const refreshAllMaterializedViews = async () => {
+    try {
+      console.log('Refreshing all materialized views...');
+      const response = await fetch('/api/refresh-account-health', { 
+        method: 'POST',
+        cache: 'no-store' 
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        console.log('All materialized views refreshed:', result.message);
+      } else {
+        console.warn('Failed to refresh materialized views:', response.status);
+      }
+    } catch (error) {
+      console.error('Error refreshing materialized views:', error);
+    }
+  };
   
   // Global date range state
   const [dateRange, setDateRange] = useState<DateRange>({
@@ -151,7 +171,11 @@ export default function Page() {
     setLoading(true);
     setTiktokError(null);
     setInstagramError(null);
+    
     try {
+      // Refresh all materialized views in the background
+      refreshAllMaterializedViews();
+      
       // Fetch TikTok data using the new unified accounts API
       const [tiktokAggRes, tiktokAccRes] = await Promise.all([
         fetch(`/api/daily-agg?clientId=${selectedClientId}`, { cache: 'no-store' }),
@@ -258,13 +282,16 @@ export default function Page() {
                 Hera Dashboard
               </h1>
             </div>
+            <MaterializedViewsRefresher />
           </div>
         </header>
         
-        <ClientSelector 
-          selectedClientId={selectedClientId} 
-          onClientChange={setSelectedClientId} 
-        />
+        <div className="mb-6">
+          <ClientSelector 
+            selectedClientId={selectedClientId} 
+            onClientChange={setSelectedClientId} 
+          />
+        </div>
         
         <PlatformSelector 
           selectedPlatform={selectedPlatform} 

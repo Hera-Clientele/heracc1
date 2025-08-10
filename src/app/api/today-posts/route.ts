@@ -22,7 +22,7 @@ export interface TodayPost {
   post_caption: string;
   is_slideshow: boolean;
   created_at: string;
-  snapshot_date: string;
+  // snapshot_date removed - using created_at instead
   views: number | null;
   likes: number | null;
   comments: number | null;

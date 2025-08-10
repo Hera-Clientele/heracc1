@@ -6,7 +6,6 @@ export interface TopPost {
   url: string;
   views: number;
   post_caption: string;
-  snapshot_date?: string;
   created_at?: string;
 }
 
@@ -129,7 +128,7 @@ export async function fetchTopPosts(period: 'today' | 'yesterday' | '3days' | '7
   // Use enhanced materialized view for pre-computed periods
   let query = supabase
     .from('mv_tiktok_top_posts_enhanced')
-    .select('video_id, username, url, views, post_caption, snapshot_date, created_at, client_id, rank, period')
+    .select('video_id, username, url, views, post_caption, created_at, client_id, rank, period')
     .eq('client_id', parseInt(clientId || '1', 10))
     .eq('period', period)
     .order('rank', { ascending: true })
@@ -164,7 +163,7 @@ async function fetchTopPostsFallback(period: 'today' | 'yesterday' | '3days' | '
 
   let query = supabase
     .from('latest_snapshots')
-    .select('video_id, username, url, views, post_caption, snapshot_date, created_at, client_id')
+    .select('video_id, username, url, views, post_caption, created_at, client_id')
     .order('views', { ascending: false })
     .limit(10);
 
