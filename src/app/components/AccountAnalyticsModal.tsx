@@ -1,6 +1,5 @@
 "use client";
 import React, { useEffect, useState } from 'react';
-import { createClient } from '@supabase/supabase-js';
 import { Line } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -13,6 +12,7 @@ import {
   Legend,
   Filler
 } from 'chart.js';
+import supabase from '../lib/supabase';
 
 // Register Chart.js components
 ChartJS.register(
@@ -55,10 +55,15 @@ interface AccountHealth {
   last_successful_post: string | null;
 }
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+// Helper function to add timeout to Supabase queries
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number = 30000): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<never>((_, reject) => 
+      setTimeout(() => reject(new Error('Query timeout after 30 seconds')), timeoutMs)
+    )
+  ]);
+}
 
 export default function AccountAnalyticsModal({ isOpen, onClose, account }: AccountAnalyticsModalProps) {
   const [analytics, setAnalytics] = useState<DailyAnalytics[]>([]);
@@ -67,6 +72,7 @@ export default function AccountAnalyticsModal({ isOpen, onClose, account }: Acco
   const [healthLoading, setHealthLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedPeriod, setSelectedPeriod] = useState(30); // Default to 30 days
+  const [queryTime, setQueryTime] = useState<number>(0);
 
   useEffect(() => {
     if (isOpen && account) {
@@ -176,66 +182,114 @@ export default function AccountAnalyticsModal({ isOpen, onClose, account }: Acco
     try {
       setLoading(true);
       setError(null);
+      const startTime = Date.now();
 
       let query;
       if (account.platform === 'instagram') {
-        // For Instagram, query the instagram_raw table
+        // For Instagram, query the instagram_raw table with date filtering
+        const endDate = new Date();
+        const startDate = new Date();
+        startDate.setDate(startDate.getDate() - selectedPeriod);
+        
         query = supabase
           .from('instagram_raw')
           .select('created_at, views, likes, comments')
           .eq('username', account.username)
           .eq('client_id', account.client_id)
+          .gte('created_at', startDate.toISOString())
+          .lte('created_at', endDate.toISOString())
           .order('created_at', { ascending: false });
       } else {
-        // For TikTok, query the latest_snapshots view
+        // For TikTok, try to use materialized views first, then fallback to filtered query
+        try {
+          // First try to use the enhanced materialized view for better performance
+          const { data: mvData, error: mvError } = await withTimeout(
+            supabase
+              .from('mv_tiktok_top_posts_enhanced')
+              .select('created_at, views, likes, comments')
+              .eq('username', account.username)
+              .eq('client_id', account.client_id)
+              .in('period', ['7days', '30days', 'month', 'all'])
+              .order('created_at', { ascending: false })
+          );
+
+          if (!mvError && mvData && mvData.length > 0) {
+            // Use materialized view data
+            const endTime = Date.now();
+            setQueryTime(endTime - startTime);
+            processAnalyticsData(mvData);
+            return;
+          }
+        } catch (mvErr) {
+          console.log('Materialized view query failed, falling back to filtered query:', mvErr);
+        }
+
+        // Fallback: query latest_snapshots with date filtering
+        const endDate = new Date();
+        const startDate = new Date();
+        startDate.setDate(startDate.getDate() - selectedPeriod);
+        
         query = supabase
           .from('latest_snapshots')
           .select('created_at, views, likes, comments')
           .eq('username', account.username)
           .eq('client_id', account.client_id)
+          .gte('created_at', startDate.toISOString())
+          .lte('created_at', endDate.toISOString())
           .order('created_at', { ascending: false });
       }
 
-      const { data, error: supabaseError } = await query;
+      const { data, error: supabaseError } = await withTimeout(query);
 
       if (supabaseError) {
         throw supabaseError;
       }
 
-      // Group by date and aggregate
-      const dailyData = new Map<string, DailyAnalytics>();
-      
-      data?.forEach((post: any) => {
-        const date = new Date(post.created_at).toISOString().split('T')[0];
-        
-        if (!dailyData.has(date)) {
-          dailyData.set(date, {
-            date,
-            posts: 0,
-            views: 0,
-            likes: 0,
-            comments: 0
-          });
-        }
-        
-        const dayData = dailyData.get(date)!;
-        dayData.posts += 1;
-        dayData.views += post.views || 0;
-        dayData.likes += post.likes || 0;
-        dayData.comments += post.comments || 0;
-      });
-
-      // Convert to array and sort by date (oldest first for chart)
-      const sortedAnalytics = Array.from(dailyData.values())
-        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-        .slice(-selectedPeriod); // Show selected period
-
-      setAnalytics(sortedAnalytics);
+      const endTime = Date.now();
+      setQueryTime(endTime - startTime);
+      processAnalyticsData(data);
     } catch (err: any) {
-      setError(err.message || 'Failed to fetch analytics');
+      if (err.message.includes('timeout')) {
+        setError('Query timed out. Please try a shorter date range or contact support.');
+      } else {
+        setError(err.message || 'Failed to fetch analytics');
+      }
     } finally {
       setLoading(false);
     }
+  }
+
+  // Helper function to process analytics data
+  function processAnalyticsData(data: any[]) {
+    // Group by date and aggregate
+    const dailyData = new Map<string, DailyAnalytics>();
+    
+    data?.forEach((post: any) => {
+      const date = new Date(post.created_at).toISOString().split('T')[0];
+      
+      if (!dailyData.has(date)) {
+        dailyData.set(date, {
+          date,
+          posts: 0,
+          views: 0,
+          likes: 0,
+          comments: 0
+        });
+      }
+      
+      const dayData = dailyData.get(date)!;
+      dayData.posts += 1;
+      dayData.views += post.views || 0;
+      dayData.likes += post.likes || 0;
+      dayData.comments += post.comments || 0;
+    });
+
+    // Convert to array and sort by date (oldest first for chart)
+    const sortedAnalytics = Array.from(dailyData.values())
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+      .slice(-selectedPeriod); // Show selected period
+
+    setAnalytics(sortedAnalytics);
   }
 
   // Prepare chart data
@@ -329,26 +383,81 @@ export default function AccountAnalyticsModal({ isOpen, onClose, account }: Acco
             </h2>
             <p className="text-slate-400 text-sm">
               Daily performance over the last {selectedPeriod} days
+              {queryTime > 0 && (
+                <span className="ml-2 text-green-400">
+                  • Loaded in {queryTime}ms
+                </span>
+              )}
             </p>
           </div>
-          <button
-            onClick={onClose}
-            className="text-slate-400 hover:text-white transition-colors"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+          <div className="flex items-center gap-3">
+            {loading && (
+              <div className="flex items-center gap-2 text-slate-400 text-sm">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
+                Loading...
+              </div>
+            )}
+            <button
+              onClick={onClose}
+              className="text-slate-400 hover:text-white transition-colors"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
         </div>
 
         {/* Content */}
-                      <div className="p-6 overflow-y-auto max-h-[70vh] scrollbar-hide">
-          {loading ? (
-            <div className="text-slate-300 py-8 text-center">Loading analytics...</div>
-          ) : error ? (
-            <div className="text-red-400 py-8 text-center">{error}</div>
+        <div className="flex-1 overflow-y-auto p-6">
+          {error ? (
+            <div className="text-center py-8">
+              <div className="text-red-400 text-lg mb-4">
+                <svg className="w-12 h-12 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+                {error}
+              </div>
+              <div className="flex gap-3 justify-center">
+                <button
+                  onClick={() => {
+                    setError(null);
+                    fetchAccountAnalytics();
+                  }}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Retry
+                </button>
+                <button
+                  onClick={() => setSelectedPeriod(Math.min(selectedPeriod, 30))}
+                  className="px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700 transition-colors"
+                >
+                  Try Shorter Range
+                </button>
+              </div>
+            </div>
+          ) : loading ? (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+              <p className="text-slate-400">Loading analytics data...</p>
+              <p className="text-slate-500 text-sm mt-2">This may take a few moments for longer date ranges</p>
+            </div>
           ) : analytics.length === 0 ? (
-            <div className="text-slate-300 py-8 text-center">No analytics data found</div>
+            <div className="text-center py-8">
+              <div className="text-slate-400 text-lg mb-4">
+                <svg className="w-12 h-12 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                No analytics data found
+              </div>
+              <p className="text-slate-500 mb-4">No posts found for the selected date range.</p>
+              <button
+                onClick={() => setSelectedPeriod(30)}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Try 30 Days
+              </button>
+            </div>
           ) : (
             <div className="space-y-6">
               {/* Account Health Metrics */}
@@ -445,6 +554,13 @@ export default function AccountAnalyticsModal({ isOpen, onClose, account }: Acco
               {/* Date Filter */}
               <div className="bg-white/5 border border-white/10 rounded-lg p-4">
                 <h3 className="text-md font-semibold text-white mb-3">Date Range</h3>
+                {selectedPeriod > 60 && (
+                  <div className="mb-3 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+                    <p className="text-yellow-400 text-sm">
+                      ⚠️ Long date ranges may take longer to load. Consider using shorter periods for better performance.
+                    </p>
+                  </div>
+                )}
                 <div className="flex flex-wrap gap-2">
                   {[
                     { label: 'Last 7 Days', days: 7 },
@@ -559,4 +675,4 @@ export default function AccountAnalyticsModal({ isOpen, onClose, account }: Acco
       </div>
     </div>
   );
-} 
+}
