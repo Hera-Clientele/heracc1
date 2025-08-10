@@ -131,40 +131,17 @@ export default function AccountAnalyticsModal({ isOpen, onClose, account }: Acco
     labels: analytics.map(day => new Date(day.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })),
     datasets: [
       {
-        label: 'Posts',
-        data: analytics.map(day => day.posts),
-        borderColor: 'rgb(59, 130, 246)',
-        backgroundColor: 'rgba(59, 130, 246, 0.1)',
-        tension: 0.4,
+        label: 'Total Views',
+        data: analytics.reduce((acc: number[], day, index) => {
+          const previousTotal = index > 0 ? acc[index - 1] : 0;
+          acc.push(previousTotal + day.views);
+          return acc;
+        }, [] as number[]),
+        borderColor: 'rgb(147, 51, 234)',
+        backgroundColor: 'rgba(147, 51, 234, 0.1)',
+        tension: 0,
         fill: true,
-        yAxisID: 'y-posts'
-      },
-      {
-        label: 'Views',
-        data: analytics.map(day => day.views),
-        borderColor: 'rgb(34, 197, 94)',
-        backgroundColor: 'rgba(34, 197, 94, 0.1)',
-        tension: 0.4,
-        fill: true,
-        yAxisID: 'y-views'
-      },
-      {
-        label: 'Likes',
-        data: analytics.map(day => day.likes),
-        borderColor: 'rgb(239, 68, 68)',
-        backgroundColor: 'rgba(239, 68, 68, 0.1)',
-        tension: 0.4,
-        fill: true,
-        yAxisID: 'y-likes'
-      },
-      {
-        label: 'Comments',
-        data: analytics.map(day => day.comments),
-        borderColor: 'rgb(168, 85, 247)',
-        backgroundColor: 'rgba(168, 85, 247, 0.1)',
-        tension: 0.4,
-        fill: true,
-        yAxisID: 'y-comments'
+
       }
     ]
   };
@@ -205,31 +182,11 @@ export default function AccountAnalyticsModal({ isOpen, onClose, account }: Acco
           maxRotation: 45
         }
       },
-      'y-posts': {
+      y: {
         type: 'linear' as const,
         display: true,
         position: 'left' as const,
         grid: {
-          color: 'rgba(255, 255, 255, 0.1)',
-        },
-        ticks: {
-          color: 'rgb(156, 163, 175)',
-          callback: function(value: any) {
-            return value;
-          }
-        },
-        title: {
-          display: true,
-          text: 'Posts',
-          color: 'rgb(156, 163, 175)'
-        }
-      },
-      'y-views': {
-        type: 'linear' as const,
-        display: true,
-        position: 'right' as const,
-        grid: {
-          drawOnChartArea: false,
           color: 'rgba(255, 255, 255, 0.1)',
         },
         ticks: {
@@ -240,22 +197,8 @@ export default function AccountAnalyticsModal({ isOpen, onClose, account }: Acco
         },
         title: {
           display: true,
-          text: 'Views',
+          text: 'Total Views',
           color: 'rgb(156, 163, 175)'
-        }
-      },
-      'y-likes': {
-        type: 'linear' as const,
-        display: false,
-        grid: {
-          drawOnChartArea: false,
-        }
-      },
-      'y-comments': {
-        type: 'linear' as const,
-        display: false,
-        grid: {
-          drawOnChartArea: false,
         }
       }
     }
@@ -328,7 +271,7 @@ export default function AccountAnalyticsModal({ isOpen, onClose, account }: Acco
               <div className="space-y-6">
                 {/* Main Combined Chart */}
                 <div className="bg-white/5 border border-white/10 rounded-lg p-6">
-                  <h3 className="text-lg font-semibold text-white mb-4">Performance Over Time</h3>
+                  <h3 className="text-lg font-semibold text-white mb-4">Total Views Over Time</h3>
                   <div className="h-80">
                     <Line data={chartData} options={chartOptions} />
                   </div>
@@ -343,16 +286,28 @@ export default function AccountAnalyticsModal({ isOpen, onClose, account }: Acco
                       <Line 
                         data={{
                           labels: chartData.labels,
-                          datasets: [chartData.datasets[0]]
+                          datasets: [{
+                            label: 'Posts',
+                            data: analytics.map(day => day.posts),
+                            borderColor: 'rgb(59, 130, 246)',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            tension: 0,
+                            fill: true
+                          }]
                         }} 
                         options={{
                           ...chartOptions,
                           scales: {
                             x: chartOptions.scales.x,
                             y: {
-                              ...chartOptions.scales['y-posts'],
+                              ...chartOptions.scales.y,
                               display: true,
-                              position: 'left'
+                              position: 'left',
+                              title: {
+                                display: true,
+                                text: 'Posts',
+                                color: 'rgb(156, 163, 175)'
+                              }
                             }
                           }
                         }} 
@@ -367,16 +322,28 @@ export default function AccountAnalyticsModal({ isOpen, onClose, account }: Acco
                       <Line 
                         data={{
                           labels: chartData.labels,
-                          datasets: [chartData.datasets[1]]
+                          datasets: [{
+                            label: 'Daily Views',
+                            data: analytics.map(day => day.views),
+                            borderColor: 'rgb(34, 197, 94)',
+                            backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                            tension: 0,
+                            fill: true
+                          }]
                         }} 
                         options={{
                           ...chartOptions,
                           scales: {
                             x: chartOptions.scales.x,
                             y: {
-                              ...chartOptions.scales['y-views'],
+                              ...chartOptions.scales.y,
                               display: true,
-                              position: 'left'
+                              position: 'left',
+                              title: {
+                                display: true,
+                                text: 'Daily Views',
+                                color: 'rgb(156, 163, 175)'
+                              }
                             }
                           }
                         }} 
