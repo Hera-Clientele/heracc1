@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { getDateRangeForPeriod } from '../lib/timezone';
-import { getCachedData, setCachedData, cacheKeys, CACHE_TTL } from '../lib/redis';
+import { getDateRangeForPeriod } from '../../lib/timezone';
+import { getCachedData, setCachedData, cacheKeys, CACHE_TTL } from '../../lib/redis';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
