@@ -1,12 +1,7 @@
 import { NextRequest } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import dayjs from 'dayjs';
-import utc from 'dayjs/plugin/utc';
-import timezone from 'dayjs/plugin/timezone';
-import { getCachedData, setCachedData, cacheKeys, CACHE_TTL } from '../../lib/redis';
-
-dayjs.extend(utc);
-dayjs.extend(timezone);
+import { getDateRangeForPeriod } from '../lib/timezone';
+import { getCachedData, setCachedData, cacheKeys, CACHE_TTL } from '../lib/redis';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -53,8 +48,8 @@ export async function GET(req: NextRequest) {
     // If not in cache, fetch from database
     console.log('Today posts API: Fetching fresh data');
     
-    // Get today's date in America/New_York timezone
-    const today = dayjs().tz('America/New_York').format('YYYY-MM-DD');
+    // Get today's date range in app timezone using the centralized function
+    const { from, to } = getDateRangeForPeriod('today');
     
     let tiktokPosts: TodayPost[] = [];
     let instagramPosts: TodayPost[] = [];
@@ -65,8 +60,8 @@ export async function GET(req: NextRequest) {
         .from('latest_snapshots')
         .select('*')
         .eq('client_id', clientId)
-        .gte('created_at', `${today}T00:00:00`)
-        .lt('created_at', `${today}T23:59:59`)
+        .gte('created_at', from!)
+        .lt('created_at', to!)
         .order('created_at', { ascending: false });
 
       if (tiktokError) {
@@ -85,8 +80,8 @@ export async function GET(req: NextRequest) {
         .from('v_latest_instagram')
         .select('*')
         .eq('client_id', clientId)
-        .gte('created_at', `${today}T00:00:00`)
-        .lt('created_at', `${today}T23:59:59`)
+        .gte('created_at', from!)
+        .lt('created_at', to!)
         .order('created_at', { ascending: false });
 
       if (instagramError) {

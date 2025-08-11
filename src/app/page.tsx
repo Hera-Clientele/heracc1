@@ -26,12 +26,8 @@ import { createClient } from '@supabase/supabase-js';
 import { fetchInstagramDailyAgg } from './lib/fetchInstagramDailyAgg';
 import InstagramWeeklyStats from './components/InstagramWeeklyStats';
 import TikTokWeeklyStats from './components/TikTokWeeklyStats';
-import dayjs from 'dayjs';
-import utc from 'dayjs/plugin/utc';
-import timezone from 'dayjs/plugin/timezone';
-
-dayjs.extend(utc);
-dayjs.extend(timezone);
+import TimezoneDebug from './components/TimezoneDebug';
+import { getCurrentTimeInAppTimezone } from './lib/timezone';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -42,11 +38,14 @@ const supabase = createClient(
 function filterDataByDateRange(data: any[], startDate: string, endDate: string): any[] {
   if (!startDate || !endDate) return data;
   
-  const start = dayjs(startDate).tz('America/New_York');
-  const end = dayjs(endDate).tz('America/New_York');
+  // Import timezone functions here to avoid circular dependency
+  const { getDateInAppTimezone } = require('./lib/timezone');
+  
+  const start = getDateInAppTimezone(startDate);
+  const end = getDateInAppTimezone(endDate);
   
   return data.filter(row => {
-    const rowDate = dayjs(row.day || row.date).tz('America/New_York');
+    const rowDate = getDateInAppTimezone(row.day || row.date);
     return rowDate.isAfter(start.subtract(1, 'day')) && rowDate.isBefore(end.add(1, 'day'));
   });
 }
@@ -55,8 +54,9 @@ function filterDataByDateRange(data: any[], startDate: string, endDate: string):
 function formatDateRangeForDisplay(startDate: string, endDate: string, period: string): string {
   if (!startDate || !endDate) return 'All Time';
   
-  const start = dayjs(startDate);
-  const end = dayjs(endDate);
+  const { getDateInAppTimezone } = require('./lib/timezone');
+  const start = getDateInAppTimezone(startDate);
+  const end = getDateInAppTimezone(endDate);
   
   switch (period) {
     case 'today':
@@ -126,7 +126,7 @@ export default function Page() {
   // Global date range state
   const [dateRange, setDateRange] = useState<DateRange>({
     startDate: '2025-07-07',
-    endDate: dayjs().tz('America/New_York').format('YYYY-MM-DD'),
+            endDate: getCurrentTimeInAppTimezone().format('YYYY-MM-DD'),
     period: 'all'
   });
 
@@ -380,6 +380,9 @@ export default function Page() {
       <ContentQueueCard clientId={selectedClientId} />
     )}
       </div>
+      
+      {/* Timezone Debug Component */}
+      <TimezoneDebug />
     </main>
   );
 }

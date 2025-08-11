@@ -1,12 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import dayjs from 'dayjs';
-import utc from 'dayjs/plugin/utc';
-import timezone from 'dayjs/plugin/timezone';
+import { getCurrentTimeInAppTimezone, getDateRangeForPeriod } from '../../../lib/timezone';
 import { getCachedData, setCachedData, cacheKeys, CACHE_TTL } from '../../../lib/redis';
-
-dayjs.extend(utc);
-dayjs.extend(timezone);
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -14,37 +9,7 @@ const supabase = createClient(
 );
 
 function getDateRange(period: string) {
-  const now = dayjs().tz('America/New_York');
-  let from: string | null = null;
-  let to: string | null = null;
-  
-  switch (period) {
-    case 'today':
-      from = now.format('YYYY-MM-DD');
-      to = now.add(1, 'day').format('YYYY-MM-DD');
-      break;
-    case 'yesterday':
-      from = now.subtract(1, 'day').format('YYYY-MM-DD');
-      to = now.format('YYYY-MM-DD');
-      break;
-    case '3days':
-      from = now.subtract(2, 'day').format('YYYY-MM-DD');
-      to = now.add(1, 'day').format('YYYY-MM-DD');
-      break;
-    case '7days':
-      from = now.subtract(6, 'day').format('YYYY-MM-DD');
-      to = now.add(1, 'day').format('YYYY-MM-DD');
-      break;
-    case 'month':
-      from = now.startOf('month').format('YYYY-MM-DD');
-      to = now.endOf('month').add(1, 'day').format('YYYY-MM-DD');
-      break;
-    case 'all':
-    default:
-      from = null;
-      to = null;
-  }
-  return { from, to };
+  return getDateRangeForPeriod(period as 'today' | 'yesterday' | '3days' | '7days' | 'month' | 'all');
 }
 
 export async function GET(req: Request) {
@@ -88,9 +53,7 @@ export async function GET(req: Request) {
     if (period === 'today') {
       try {
         // Check if materialized view has data for today
-        const today = new Date();
-        const todayEST = new Date(today.toLocaleString("en-US", {timeZone: "America/New_York"}));
-        const todayDate = todayEST.toISOString().split('T')[0];
+        const todayDate = getCurrentTimeInAppTimezone().format('YYYY-MM-DD');
         
         const { data: todayCheck, error: todayError } = await supabase
           .from('mv_instagram_top_posts_enhanced')
@@ -143,7 +106,8 @@ export async function GET(req: Request) {
           .limit(10);
 
         if (from && to) {
-          fallbackQuery = fallbackQuery.gte('created_at', `${from}T00:00:00`).lt('created_at', `${to}T00:00:00`);
+          // Use the ISO string dates directly since they're already in the correct timezone
+          fallbackQuery = fallbackQuery.gte('created_at', from).lt('created_at', to);
         }
 
         const fallbackResult = await fallbackQuery;
@@ -171,7 +135,8 @@ export async function GET(req: Request) {
             .limit(10);
 
           if (from && to) {
-            fallbackQuery = fallbackQuery.gte('created_at', `${from}T00:00:00`).lt('created_at', `${to}T00:00:00`);
+            // Use the ISO string dates directly since they're already in the correct timezone
+            fallbackQuery = fallbackQuery.gte('created_at', from).lt('created_at', to);
           }
 
           const fallbackResult = await fallbackQuery;
@@ -188,7 +153,8 @@ export async function GET(req: Request) {
             .limit(10);
 
           if (from && to) {
-            fallbackQuery = fallbackQuery.gte('created_at', `${from}T00:00:00`).lt('created_at', `${to}T00:00:00`);
+            // Use the ISO string dates directly since they're already in the correct timezone
+            fallbackQuery = fallbackQuery.gte('created_at', from).lt('created_at', to);
           }
 
           const fallbackResult = await fallbackQuery;
@@ -220,7 +186,8 @@ export async function GET(req: Request) {
           .limit(10);
 
         if (from && to) {
-          fallbackQuery = fallbackQuery.gte('created_at', `${from}T00:00:00`).lt('created_at', `${to}T00:00:00`);
+          // Use the ISO string dates directly since they're already in the correct timezone
+          fallbackQuery = fallbackQuery.gte('created_at', from).lt('created_at', to);
         }
 
         const fallbackResult = await fallbackQuery;

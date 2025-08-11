@@ -55,15 +55,7 @@ interface AccountHealth {
   last_successful_post: string | null;
 }
 
-// Helper function to add timeout to Supabase queries
-function withTimeout<T>(promise: Promise<T>, timeoutMs: number = 30000): Promise<T> {
-  return Promise.race([
-    promise,
-    new Promise<never>((_, reject) => 
-      setTimeout(() => reject(new Error('Query timeout after 30 seconds')), timeoutMs)
-    )
-  ]);
-}
+
 
 export default function AccountAnalyticsModal({ isOpen, onClose, account }: AccountAnalyticsModalProps) {
   const [analytics, setAnalytics] = useState<DailyAnalytics[]>([]);
@@ -203,15 +195,13 @@ export default function AccountAnalyticsModal({ isOpen, onClose, account }: Acco
         // For TikTok, try to use materialized views first, then fallback to filtered query
         try {
           // First try to use the enhanced materialized view for better performance
-          const { data: mvData, error: mvError } = await withTimeout(
-            supabase
-              .from('mv_tiktok_top_posts_enhanced')
-              .select('created_at, views, likes, comments')
-              .eq('username', account.username)
-              .eq('client_id', account.client_id)
-              .in('period', ['7days', '30days', 'month', 'all'])
-              .order('created_at', { ascending: false })
-          );
+          const { data: mvData, error: mvError } = await supabase
+            .from('mv_tiktok_top_posts_enhanced')
+            .select('created_at, views, likes, comments')
+            .eq('username', account.username)
+            .eq('client_id', account.client_id)
+            .in('period', ['7days', '30days', 'month', 'all'])
+            .order('created_at', { ascending: false });
 
           if (!mvError && mvData && mvData.length > 0) {
             // Use materialized view data
@@ -239,7 +229,7 @@ export default function AccountAnalyticsModal({ isOpen, onClose, account }: Acco
           .order('created_at', { ascending: false });
       }
 
-      const { data, error: supabaseError } = await withTimeout(query);
+      const { data, error: supabaseError } = await query;
 
       if (supabaseError) {
         throw supabaseError;

@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
+import { getWeekStartInAppTimezone } from '../../lib/timezone';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -8,11 +9,14 @@ const supabase = createClient(
 
 export async function GET() {
   try {
+    // Get the start of the current week in app timezone
+    const weekStart = getWeekStartInAppTimezone();
+    
     const { data, error } = await supabase
       .from('accounts')
       .select('username')
       .eq('platform', 'tiktok')
-      .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
+      .gte('created_at', `${weekStart}T00:00:00`)
       .not('username', 'is', null);
 
     if (error) throw error;

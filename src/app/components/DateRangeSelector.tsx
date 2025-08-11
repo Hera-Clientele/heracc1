@@ -1,11 +1,6 @@
 "use client";
 import React, { useState } from "react";
-import dayjs from "dayjs";
-import utc from 'dayjs/plugin/utc';
-import timezone from 'dayjs/plugin/timezone';
-
-dayjs.extend(utc);
-dayjs.extend(timezone);
+import { getCurrentTimeInAppTimezone, getDateInAppTimezone } from '../lib/timezone';
 
 export interface DateRange {
   startDate: string;
@@ -35,7 +30,7 @@ export default function DateRangeSelector({ onDateRangeChange, currentRange }: D
   const [customSingleDate, setCustomSingleDate] = useState('');
 
   const handlePeriodChange = (period: string) => {
-    const now = dayjs().tz('America/New_York');
+    const now = getCurrentTimeInAppTimezone();
     let startDate = '';
     let endDate = '';
 
@@ -97,8 +92,8 @@ export default function DateRangeSelector({ onDateRangeChange, currentRange }: D
   const formatDateRange = (startDate: string, endDate: string) => {
     if (!startDate || !endDate) return 'All Time';
     
-    const start = dayjs(startDate);
-    const end = dayjs(endDate);
+    const start = getDateInAppTimezone(startDate);
+    const end = getDateInAppTimezone(endDate);
     
     if (start.isSame(end, 'day')) {
       return start.format('MMM D, YYYY');

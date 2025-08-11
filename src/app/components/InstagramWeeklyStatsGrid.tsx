@@ -45,8 +45,37 @@ function getWeekRange(dates: string[]): string {
 export default function InstagramWeeklyStatsGrid({ data, uniqueAccounts }: InstagramWeeklyStatsGridProps) {
   const [preciseUniqueAccounts, setPreciseUniqueAccounts] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   
   const currentWeek = getCurrentWeekNumber();
+
+  // Function to refresh materialized views
+  const refreshMaterializedViews = async () => {
+    if (refreshing) return;
+    
+    setRefreshing(true);
+    try {
+      const response = await fetch('/api/refresh-account-health', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        console.log('Materialized views refreshed successfully:', result);
+        // Reload the page to get fresh data
+        window.location.reload();
+      } else {
+        console.error('Failed to refresh materialized views');
+      }
+    } catch (error) {
+      console.error('Error refreshing materialized views:', error);
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   // Group data by week number and get current week data
   const weeks: Record<string, any[]> = {};
@@ -118,9 +147,19 @@ export default function InstagramWeeklyStatsGrid({ data, uniqueAccounts }: Insta
 
   return (
     <div className="mb-10">
-      <h3 className="text-lg font-semibold text-white mb-4">
-        This Week's Performance ({weekRange})
-      </h3>
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-lg font-semibold text-white">
+          This Week's Performance ({weekRange})
+        </h3>
+        <button
+          onClick={refreshMaterializedViews}
+          disabled={refreshing}
+          className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          title="Refresh materialized views to get latest data"
+        >
+          {refreshing ? 'Refreshing...' : '🔄 Refresh Data'}
+        </button>
+      </div>
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6">
         {cards.map((card) => (
           <div

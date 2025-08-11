@@ -1,11 +1,6 @@
 "use client";
 import React, { useEffect, useState } from 'react';
-import dayjs from 'dayjs';
-import utc from 'dayjs/plugin/utc';
-import timezone from 'dayjs/plugin/timezone';
-
-dayjs.extend(utc);
-dayjs.extend(timezone);
+import { getDateInAppTimezone, getCurrentTimeInAppTimezone } from '../lib/timezone';
 
 interface TodayPost {
   video_id: string;
@@ -76,7 +71,7 @@ export default function TodayPostsCard({ clientId, platform }: TodayPostsCardPro
   }, [platform]);
 
   const formatTime = (time: string) => {
-    return dayjs(time).tz('America/New_York').format('MMM D, h:mm A');
+    return getDateInAppTimezone(time).format('MMM D, h:mm A');
   };
 
   const formatNumber = (num: number | null | undefined) => {
@@ -187,7 +182,7 @@ export default function TodayPostsCard({ clientId, platform }: TodayPostsCardPro
         <div>
           <h2 className="text-xl font-semibold text-white">Today's Posts</h2>
           <p className="text-slate-400 text-sm">
-            {dayjs().tz('America/New_York').format('MMMM D, YYYY')}
+            {getCurrentTimeInAppTimezone().format('MMMM D, YYYY')}
           </p>
         </div>
         

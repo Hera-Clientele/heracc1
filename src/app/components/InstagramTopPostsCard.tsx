@@ -1,11 +1,8 @@
 "use client";
 import React, { useState, useEffect } from 'react';
-import dayjs from 'dayjs';
-import utc from 'dayjs/plugin/utc';
-import timezone from 'dayjs/plugin/timezone';
+import { getDateInAppTimezone } from '../lib/timezone';
 
-dayjs.extend(utc);
-dayjs.extend(timezone);
+
 
 const PERIODS = [
   { label: "Today's Top 10", value: 'today' },
@@ -97,7 +94,7 @@ export default function InstagramTopPostsCard({ clientId }: InstagramTopPostsCar
                   </td>
                   <td className="px-4 py-2 text-center">{post.views.toLocaleString()}</td>
                   <td className="px-4 py-2 text-center">
-                    {post.created_at ? dayjs(post.created_at).tz('America/New_York').format('MM/DD/YYYY h:mm A') : ''}
+                    {post.created_at ? getDateInAppTimezone(post.created_at).format('MM/DD/YYYY h:mm A') : ''}
                   </td>
                 </tr>
               ))}

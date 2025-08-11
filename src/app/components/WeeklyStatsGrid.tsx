@@ -1,13 +1,6 @@
 "use client";
 import React, { useEffect, useState } from 'react';
-import dayjs from 'dayjs';
-import utc from 'dayjs/plugin/utc';
-import timezone from 'dayjs/plugin/timezone';
-import isoWeek from 'dayjs/plugin/isoWeek';
-
-dayjs.extend(utc);
-dayjs.extend(timezone);
-dayjs.extend(isoWeek);
+import { getCurrentWeekNumber, getDateInAppTimezone } from '../lib/timezone';
 
 interface Row {
   day: string;
@@ -29,16 +22,11 @@ function sum(arr: number[]): number {
   return arr.reduce((a, b) => a + b, 0);
 }
 
-// Get the current ISO week number
-function getCurrentWeekNumber(): number {
-  return dayjs().tz('America/New_York').isoWeek();
-}
-
 // Get week range for display
 function getWeekRange(dates: string[]): string {
   if (dates.length === 0) return '';
-  const start = dayjs(dates[0]).startOf('isoWeek').format('MMM D');
-  const end = dayjs(dates[0]).endOf('isoWeek').format('MMM D');
+  const start = getDateInAppTimezone(dates[0]).startOf('isoWeek').format('MMM D');
+  const end = getDateInAppTimezone(dates[0]).endOf('isoWeek').format('MMM D');
   return `${start} - ${end}`;
 }
 
@@ -51,7 +39,7 @@ export default function WeeklyStatsGrid({ data, uniqueAccounts }: WeeklyStatsGri
   // Group data by week number and get current week data
   const weeks: Record<string, Row[]> = {};
   for (const row of data) {
-    const week = dayjs(row.day).tz('America/New_York').isoWeek();
+    const week = getDateInAppTimezone(row.day).isoWeek();
     if (!weeks[week]) weeks[week] = [];
     weeks[week].push(row);
   }

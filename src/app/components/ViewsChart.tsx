@@ -10,12 +10,7 @@ import {
   CartesianGrid,
   Area,
 } from "recharts";
-import dayjs from "dayjs";
-import utc from 'dayjs/plugin/utc';
-import timezone from 'dayjs/plugin/timezone';
-
-dayjs.extend(utc);
-dayjs.extend(timezone);
+import { getCurrentTimeInAppTimezone, getDateInAppTimezone } from "../lib/timezone";
 
 interface Row {
   day: string;
@@ -30,7 +25,7 @@ interface Row {
 
 // Utility function to calculate next update time (every hour)
 function getNextUpdateTime() {
-  const now = dayjs().tz('America/New_York');
+  const now = getCurrentTimeInAppTimezone();
   
   // Get the next hour (current hour + 1, with minutes and seconds set to 0)
   const nextUpdate = now.add(1, 'hour').minute(0).second(0).millisecond(0);
@@ -40,7 +35,7 @@ function getNextUpdateTime() {
 
 // Utility function to get last update time (every hour)
 function getLastUpdateTime() {
-  const now = dayjs().tz('America/New_York');
+  const now = getCurrentTimeInAppTimezone();
   
   // Get the current hour with minutes and seconds set to 0
   const lastUpdate = now.minute(0).second(0).millisecond(0);
@@ -86,7 +81,7 @@ export default function ViewsChart({ data }: { data: Row[] }) {
       if (gain === 0 && label === initialDate) return null;
       return (
         <div className="bg-slate-900/90 p-3 rounded-lg shadow text-white border border-slate-700">
-          <div className="font-semibold mb-1">{dayjs(label).tz('America/New_York').format("MMMM D")}</div>
+          <div className="font-semibold mb-1">{getDateInAppTimezone(label).format("MMMM D")}</div>
           <div>Daily Gain: <span className="text-orange-400 font-bold">{gain}</span></div>
         </div>
       );
@@ -101,7 +96,7 @@ export default function ViewsChart({ data }: { data: Row[] }) {
       if (posts === 0 && label === initialDate) return null;
       return (
         <div className="bg-slate-900/90 p-3 rounded-lg shadow text-white border border-slate-700">
-          <div className="font-semibold mb-1">{dayjs(label).tz('America/New_York').format("MMMM D")}</div>
+          <div className="font-semibold mb-1">{getDateInAppTimezone(label).format("MMMM D")}</div>
           <div>Posts: <span className="text-green-400 font-bold">{posts}</span></div>
         </div>
       );
@@ -132,7 +127,7 @@ export default function ViewsChart({ data }: { data: Row[] }) {
             <XAxis
               dataKey="day"
               tick={{ fontSize: 12 }}
-              tickFormatter={(date) => date === initialDate ? "" : dayjs(date).tz('America/New_York').format("MM/DD")}
+              tickFormatter={(date) => date === initialDate ? "" : getDateInAppTimezone(date).format("MM/DD")}
               interval="preserveStartEnd"
             />
             <YAxis tick={{ fontSize: 12 }} allowDecimals={false} domain={[0, 'auto']} tickFormatter={tick => tick === 0 ? '' : tick} />
@@ -170,7 +165,7 @@ export default function ViewsChart({ data }: { data: Row[] }) {
             <XAxis
               dataKey="day"
               tick={{ fontSize: 12 }}
-              tickFormatter={(date) => date === initialDate ? "" : dayjs(date).tz('America/New_York').format("MM/DD")}
+              tickFormatter={(date) => date === initialDate ? "" : getDateInAppTimezone(date).format("MM/DD")}
               interval="preserveStartEnd"
             />
             <YAxis tick={{ fontSize: 12 }} allowDecimals={false} domain={[0, 'auto']} tickFormatter={tick => tick === 0 ? '' : tick} />
