@@ -28,9 +28,37 @@ interface InstagramRow {
   engagement_rate: number;
 }
 
-export default function InstagramTotalViewsChart({ data }: { data: InstagramRow[] }) {
+interface InstagramTotalViewsChartProps {
+  data: InstagramRow[];
+  startDate?: string;
+  endDate?: string;
+}
+
+export default function InstagramTotalViewsChart({ data, startDate, endDate }: InstagramTotalViewsChartProps) {
+  // Filter data by date range if provided and ensure no future dates
+  let filteredData = data;
+  const currentDate = dayjs().tz('America/New_York').startOf('day');
+  
+  if (startDate && endDate) {
+    filteredData = data.filter(row => {
+      const rowDate = dayjs(row.day);
+      const start = dayjs(startDate);
+      const end = dayjs(endDate);
+      // Only show data within the selected range and not in the future
+      return rowDate.isAfter(start.subtract(1, 'day')) && 
+             rowDate.isBefore(end.add(1, 'day')) && 
+             rowDate.isBefore(currentDate.add(1, 'day'));
+    });
+  } else {
+    // If no date range specified, still filter out future dates
+    filteredData = data.filter(row => {
+      const rowDate = dayjs(row.day);
+      return rowDate.isBefore(currentDate.add(1, 'day'));
+    });
+  }
+
   // Ensure all fields are numbers
-  const chartData = data.map(row => ({
+  const chartData = filteredData.map(row => ({
     date: row.day,
     total_views: Number(row.views),
     total_likes: Number(row.likes),
@@ -66,8 +94,8 @@ export default function InstagramTotalViewsChart({ data }: { data: InstagramRow[
         <LineChart data={cumulativeData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
           <defs>
             <linearGradient id="colorViews" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.5}/>
-              <stop offset="100%" stopColor="#3b82f6" stopOpacity={0.15}/>
+              <stop offset="0%" stopColor="#e4405f" stopOpacity={0.5}/>
+              <stop offset="100%" stopColor="#e4405f" stopOpacity={0.15}/>
             </linearGradient>
           </defs>
           <CartesianGrid strokeDasharray="3 3" />
@@ -77,18 +105,28 @@ export default function InstagramTotalViewsChart({ data }: { data: InstagramRow[
             tickFormatter={(date) => dayjs(date).tz('America/New_York').format("MM/DD")}
             interval="preserveStartEnd"
           />
-          <YAxis tick={{ fontSize: 12 }} allowDecimals={false} domain={[0, 'auto']} tickFormatter={tick => tick === 0 ? '' : tick} />
+          <YAxis 
+            tick={{ fontSize: 12 }} 
+            allowDecimals={false} 
+            domain={[0, 'auto']} 
+            tickFormatter={tick => {
+              if (tick === 0) return '';
+              if (tick >= 1000000) return `${(tick / 1000000).toFixed(1)}M`;
+              if (tick >= 1000) return `${(tick / 1000).toFixed(1)}K`;
+              return tick.toString();
+            }} 
+          />
           <Tooltip content={<CustomTooltip />} />
           <Area
             type="linear"
             dataKey="total_views"
             stroke="none"
-            fill="#ff0000"
+            fill="url(#colorViews)"
           />
           <Line
             type="linear"
             dataKey="total_views"
-            stroke="#2563eb"
+            stroke="#e4405f"
             strokeWidth={2}
             dot={{ r: 3 }}
             activeDot={{ r: 5 }}

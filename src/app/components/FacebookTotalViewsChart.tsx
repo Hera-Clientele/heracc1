@@ -17,24 +17,19 @@ import timezone from 'dayjs/plugin/timezone';
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
-interface Row {
+interface FacebookRow {
   day: string;
-  posts: number;
-  accounts: number;
-  views: number;
-  likes: number;
-  comments: number;
-  shares: number;
-  engagement_rate: number;
+  video_views: number;
+  post_engagements: number;
 }
 
-interface TotalViewsChartProps {
-  data: Row[];
+interface FacebookTotalViewsChartProps {
+  data: FacebookRow[];
   startDate?: string;
   endDate?: string;
 }
 
-export default function TotalViewsChart({ data, startDate, endDate }: TotalViewsChartProps) {
+export default function FacebookTotalViewsChart({ data, startDate, endDate }: FacebookTotalViewsChartProps) {
   // Filter data by date range if provided and ensure no future dates
   let filteredData = data;
   const currentDate = dayjs().tz('America/New_York').startOf('day');
@@ -57,29 +52,17 @@ export default function TotalViewsChart({ data, startDate, endDate }: TotalViews
     });
   }
 
-  // Insert initial zero point for 2025-07-07
-  const initialDate = "2025-07-07";
-  const initialRow: Row = {
-    day: initialDate,
-    posts: 0,
-    accounts: 0,
-    views: 0,
-    likes: 0,
-    comments: 0,
-    shares: 0,
-    engagement_rate: 0,
-  };
-  
-  // Only add initial row if we're not filtering by date or if the initial date is within range
-  let dataWithInitial = filteredData;
-  if (!startDate || !endDate || dayjs(initialDate).isAfter(dayjs(startDate).subtract(1, 'day'))) {
-    dataWithInitial = [initialRow, ...filteredData];
-  }
+  // Ensure all fields are numbers
+  const chartData = filteredData.map(row => ({
+    date: row.day,
+    total_views: Number(row.video_views),
+    total_engagements: Number(row.post_engagements),
+  }));
 
   // Compute cumulative views
-  const cumulativeData = dataWithInitial.reduce((acc: Row[], curr, idx) => {
-    const prevTotal = idx > 0 ? acc[idx - 1].views : 0;
-    acc.push({ ...curr, views: prevTotal + curr.views });
+  const cumulativeData = chartData.reduce((acc: any[], curr, idx) => {
+    const prevTotal = idx > 0 ? acc[idx - 1].total_views : 0;
+    acc.push({ ...curr, total_views: prevTotal + curr.total_views });
     return acc;
   }, []);
 
@@ -99,20 +82,20 @@ export default function TotalViewsChart({ data, startDate, endDate }: TotalViews
 
   return (
     <div className="backdrop-blur-md bg-white/5 border border-white/10 rounded-2xl shadow-xl p-6">
-      <h2 className="text-xl font-semibold text-white mb-4">Total Views Over Time</h2>
+      <h2 className="text-xl font-semibold text-white mb-4">Facebook Performance Over Time</h2>
       <ResponsiveContainer width="100%" height={300}>
         <LineChart data={cumulativeData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
           <defs>
             <linearGradient id="colorViews" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#10b981" stopOpacity={0.5}/>
-              <stop offset="100%" stopColor="#10b981" stopOpacity={0.15}/>
+              <stop offset="0%" stopColor="#1877f2" stopOpacity={0.5}/>
+              <stop offset="100%" stopColor="#1877f2" stopOpacity={0.15}/>
             </linearGradient>
           </defs>
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis
-            dataKey="day"
+            dataKey="date"
             tick={{ fontSize: 12 }}
-            tickFormatter={(date) => date === initialDate ? "" : dayjs(date).tz('America/New_York').format("MM/DD")}
+            tickFormatter={(date) => dayjs(date).tz('America/New_York').format("MM/DD")}
             interval="preserveStartEnd"
           />
           <YAxis 
@@ -129,14 +112,14 @@ export default function TotalViewsChart({ data, startDate, endDate }: TotalViews
           <Tooltip content={<CustomTooltip />} />
           <Area
             type="linear"
-            dataKey="views"
+            dataKey="total_views"
             stroke="none"
             fill="url(#colorViews)"
           />
           <Line
             type="linear"
-            dataKey="views"
-            stroke="#10b981"
+            dataKey="total_views"
+            stroke="#1877f2"
             strokeWidth={2}
             dot={{ r: 3 }}
             activeDot={{ r: 5 }}
@@ -145,4 +128,4 @@ export default function TotalViewsChart({ data, startDate, endDate }: TotalViews
       </ResponsiveContainer>
     </div>
   );
-} 
+}

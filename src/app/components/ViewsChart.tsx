@@ -44,6 +44,13 @@ function getLastUpdateTime() {
 }
 
 export default function ViewsChart({ data }: { data: Row[] }) {
+  // Filter out future dates
+  const currentDate = getCurrentTimeInAppTimezone().startOf('day');
+  const filteredData = data.filter(row => {
+    const rowDate = getDateInAppTimezone(row.day);
+    return rowDate.isBefore(currentDate.add(1, 'day'));
+  });
+
   // Insert initial zero point for 2025-07-07
   const initialDate = "2025-07-07";
   const initialRow: Row = {
@@ -58,7 +65,7 @@ export default function ViewsChart({ data }: { data: Row[] }) {
   };
 
   // Compute daily views gained per day
-  const dailyViewsWithInitial = [initialRow, ...data];
+  const dailyViewsWithInitial = [initialRow, ...filteredData];
   const dailyGains = dailyViewsWithInitial.map((row, idx) => {
     if (idx === 0) return { day: row.day, gain: 0 };
     return {
@@ -68,7 +75,7 @@ export default function ViewsChart({ data }: { data: Row[] }) {
   });
 
   // Compute daily posts
-  const dailyPostsWithInitial = [initialRow, ...data];
+  const dailyPostsWithInitial = [initialRow, ...filteredData];
 
   // Get update times
   const lastUpdate = getLastUpdateTime();
@@ -130,7 +137,17 @@ export default function ViewsChart({ data }: { data: Row[] }) {
               tickFormatter={(date) => date === initialDate ? "" : getDateInAppTimezone(date).format("MM/DD")}
               interval="preserveStartEnd"
             />
-            <YAxis tick={{ fontSize: 12 }} allowDecimals={false} domain={[0, 'auto']} tickFormatter={tick => tick === 0 ? '' : tick} />
+            <YAxis 
+              tick={{ fontSize: 12 }} 
+              allowDecimals={false} 
+              domain={[0, 'auto']} 
+              tickFormatter={tick => {
+                if (tick === 0) return '';
+                if (tick >= 1000000) return `${(tick / 1000000).toFixed(1)}M`;
+                if (tick >= 1000) return `${(tick / 1000).toFixed(1)}K`;
+                return tick.toString();
+              }} 
+            />
             <Tooltip content={<DailyGainTooltip />} />
             <Area
               type="linear"
@@ -168,7 +185,17 @@ export default function ViewsChart({ data }: { data: Row[] }) {
               tickFormatter={(date) => date === initialDate ? "" : getDateInAppTimezone(date).format("MM/DD")}
               interval="preserveStartEnd"
             />
-            <YAxis tick={{ fontSize: 12 }} allowDecimals={false} domain={[0, 'auto']} tickFormatter={tick => tick === 0 ? '' : tick} />
+            <YAxis 
+              tick={{ fontSize: 12 }} 
+              allowDecimals={false} 
+              domain={[0, 'auto']} 
+              tickFormatter={tick => {
+                if (tick === 0) return '';
+                if (tick >= 1000000) return `${(tick / 1000000).toFixed(1)}M`;
+                if (tick >= 1000) return `${(tick / 1000).toFixed(1)}K`;
+                return tick.toString();
+              }} 
+            />
             <Tooltip content={<PostsTooltip />} />
             <Area
               type="linear"

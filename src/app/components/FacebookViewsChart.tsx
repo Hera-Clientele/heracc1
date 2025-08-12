@@ -17,15 +17,10 @@ import timezone from 'dayjs/plugin/timezone';
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
-interface InstagramRow {
+interface FacebookRow {
   day: string;
-  posts: number;
-  accounts: number;
-  views: number;
-  likes: number;
-  comments: number;
-  shares: number;
-  engagement_rate: number;
+  video_views: number;
+  post_engagements: number;
 }
 
 // Utility function to calculate next update time (every hour)
@@ -48,7 +43,7 @@ function getLastUpdateTime() {
   return lastUpdate;
 }
 
-export default function InstagramViewsChart({ data }: { data: InstagramRow[] }) {
+export default function FacebookViewsChart({ data }: { data: FacebookRow[] }) {
   // Filter out future dates
   const currentDate = dayjs().tz('America/New_York').startOf('day');
   const filteredData = data.filter(row => {
@@ -59,17 +54,17 @@ export default function InstagramViewsChart({ data }: { data: InstagramRow[] }) 
   // Compute daily views gained per day
   const dailyViewsChartData = filteredData.map(row => ({
     date: row.day,
-    total_views: Number(row.views),
+    total_views: Number(row.video_views),
   }));
   const dailyGains = dailyViewsChartData.map((row) => ({
     date: row.date,
     gain: row.total_views,
   }));
 
-  // Compute daily posts
-  const dailyPostsChartData = filteredData.map(row => ({
+  // Compute daily engagement
+  const dailyEngagementChartData = filteredData.map(row => ({
     date: row.day,
-    posts: Number(row.posts),
+    engagements: Number(row.post_engagements),
   }));
 
   // Get update times
@@ -83,21 +78,21 @@ export default function InstagramViewsChart({ data }: { data: InstagramRow[] }) 
       return (
         <div className="bg-slate-900/90 p-3 rounded-lg shadow text-white border border-slate-700">
           <div className="font-semibold mb-1">{dayjs(label).tz('America/New_York').format("MMMM D")}</div>
-          <div>Daily Gain: <span className="text-orange-400 font-bold">{gain}</span></div>
+          <div>Daily Views: <span className="text-orange-400 font-bold">{gain}</span></div>
         </div>
       );
     }
     return null;
   };
 
-  // Custom Tooltip for Posts
-  const PostsTooltip = ({ active, payload, label }: any) => {
+  // Custom Tooltip for Engagements
+  const EngagementsTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
-      const posts = payload[0].value;
+      const engagements = payload[0].value;
       return (
         <div className="bg-slate-900/90 p-3 rounded-lg shadow text-white border border-slate-700">
           <div className="font-semibold mb-1">{dayjs(label).tz('America/New_York').format("MMMM D")}</div>
-          <div>Posts: <span className="text-green-400 font-bold">{posts}</span></div>
+          <div>Engagements: <span className="text-green-400 font-bold">{engagements}</span></div>
         </div>
       );
     }
@@ -160,13 +155,13 @@ export default function InstagramViewsChart({ data }: { data: InstagramRow[] }) 
         </ResponsiveContainer>
       </div>
       
-      {/* Daily Posts */}
+      {/* Daily Engagement */}
       <div>
-        <div className="font-semibold text-lg mb-2 text-white">Daily Posts</div>
+        <div className="font-semibold text-lg mb-2 text-white">Daily Engagement</div>
         <ResponsiveContainer width="100%" height={200}>
-          <LineChart data={dailyPostsChartData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+          <LineChart data={dailyEngagementChartData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
             <defs>
-              <linearGradient id="colorPosts" x1="0" y1="0" x2="0" y2="1">
+              <linearGradient id="colorEngagements" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor="#10b981" stopOpacity={0.5}/>
                 <stop offset="100%" stopColor="#10b981" stopOpacity={0.15}/>
               </linearGradient>
@@ -189,16 +184,16 @@ export default function InstagramViewsChart({ data }: { data: InstagramRow[] }) 
                 return tick.toString();
               }} 
             />
-            <Tooltip content={<PostsTooltip />} />
+            <Tooltip content={<EngagementsTooltip />} />
             <Area
               type="linear"
-              dataKey="posts"
+              dataKey="engagements"
               stroke="none"
-              fill="url(#colorPosts)"
+              fill="url(#colorEngagements)"
             />
             <Line
               type="linear"
-              dataKey="posts"
+              dataKey="engagements"
               stroke="#10b981"
               strokeWidth={2}
               dot={{ r: 3 }}
@@ -209,4 +204,4 @@ export default function InstagramViewsChart({ data }: { data: InstagramRow[] }) 
       </div>
     </div>
   );
-} 
+}
