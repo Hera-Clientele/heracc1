@@ -17,9 +17,9 @@ export default function UnifiedAccountsCard({ platform, clientId }: UnifiedAccou
   
   // Search and filter state
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<string>('Active');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
-  const [sortBy, setSortBy] = useState<string>('average_views');
+  const [sortBy, setSortBy] = useState<string>('followers');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   useEffect(() => {
