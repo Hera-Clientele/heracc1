@@ -73,7 +73,7 @@ export default function FacebookViewsChart({ data, startDate, endDate }: Faceboo
     if (active && payload && payload.length) {
       const views = payload.find((p: any) => p.dataKey === 'views')?.value || 0;
       const reach = payload.find((p: any) => p.dataKey === 'reach')?.value || 0;
-      const profileVisits = payload.find((p: any) => p.dataKey === 'profile_visits')?.value || 0;
+
       
       return (
         <div className="bg-slate-900/90 p-3 rounded-lg shadow text-white border border-slate-700">
@@ -81,7 +81,7 @@ export default function FacebookViewsChart({ data, startDate, endDate }: Faceboo
           <div className="space-y-1">
             <div>Views: <span className="text-blue-400 font-bold">{views.toLocaleString()}</span></div>
             <div>Reach: <span className="text-green-400 font-bold">{reach.toLocaleString()}</span></div>
-            <div>Profile Visits: <span className="text-purple-400 font-bold">{profileVisits.toLocaleString()}</span></div>
+
           </div>
         </div>
       );
