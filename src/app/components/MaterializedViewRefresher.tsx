@@ -29,7 +29,7 @@ export default function MaterializedViewRefresher({
     setError(null);
     
     try {
-      const response = await fetch('/api/refresh-account-health', {
+      const response = await fetch('/api/refresh-all-materialized-views', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

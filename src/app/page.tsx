@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import StatsGrid from './components/StatsGrid';
 import WeeklyStatsGrid from './components/WeeklyStatsGrid';
 import InstagramWeeklyStatsGrid from './components/InstagramWeeklyStatsGrid';
@@ -13,9 +13,12 @@ import InstagramStatsGrid from './components/InstagramStatsGrid';
 import InstagramViewsChart from './components/InstagramViewsChart';
 import InstagramTopPostsCard from './components/InstagramTopPostsCard';
 import FacebookTotalViewsChart from './components/FacebookTotalViewsChart';
+import ProfileVisitsChart from './components/ProfileVisitsChart';
+import MetaAnalyticsTotalViewsChart from './components/MetaAnalyticsTotalViewsChart';
 import FacebookViewsChart from './components/FacebookViewsChart';
 import FacebookStatsGrid from './components/FacebookStatsGrid';
 import FacebookWeeklyStats from './components/FacebookWeeklyStats';
+import MetaAnalyticsStatsGrid from './components/MetaAnalyticsStatsGrid';
 import FacebookAccountsCard from './components/FacebookAccountsCard';
 import AllPlatformsTotalViewsChart from './components/AllPlatformsTotalViewsChart';
 import AllPlatformsDailyViewsChart from './components/AllPlatformsDailyViewsChart';
@@ -389,6 +392,50 @@ export default function Page() {
   // Format the date range for display
   const dateRangeText = formatDateRangeForDisplay(dateRange.startDate, dateRange.endDate, dateRange.period);
 
+  // Fetch meta analytics data for Instagram and Facebook
+  const [metaAnalyticsData, setMetaAnalyticsData] = useState<any[]>([]);
+  const [metaAnalyticsLoading, setMetaAnalyticsLoading] = useState(true);
+
+  const fetchMetaAnalytics = useCallback(async () => {
+    if (!selectedClientId || selectedClientId === 'all') {
+      setMetaAnalyticsData([]);
+      setMetaAnalyticsLoading(false);
+      return;
+    }
+
+    try {
+      setMetaAnalyticsLoading(true);
+      const response = await fetch(`/api/meta-analytics/daily-agg?clientId=${selectedClientId}`);
+      if (response.ok) {
+        const result = await response.json();
+        setMetaAnalyticsData(result.data || []);
+      } else {
+        console.error('Failed to fetch meta analytics data');
+        setMetaAnalyticsData([]);
+      }
+    } catch (error) {
+      console.error('Error fetching meta analytics data:', error);
+      setMetaAnalyticsData([]);
+    } finally {
+      setMetaAnalyticsLoading(false);
+    }
+  }, [selectedClientId]);
+
+  // Fetch meta analytics data when client changes
+  useEffect(() => {
+    fetchMetaAnalytics();
+  }, [fetchMetaAnalytics]);
+
+  // Debug logging
+  useEffect(() => {
+    console.log('Meta Analytics Data:', {
+      loading: metaAnalyticsLoading,
+      count: metaAnalyticsData.length,
+      sample: metaAnalyticsData[0],
+      platform: selectedPlatform
+    });
+  }, [metaAnalyticsData, metaAnalyticsLoading, selectedPlatform]);
+
   return (
     <main className="min-h-screen bg-gradient-to-br from-[#18181b] to-[#23272f] flex flex-col items-center py-12 font-sans">
       <div className="w-full max-w-4xl">
@@ -416,6 +463,14 @@ export default function Page() {
           onPlatformChange={setSelectedPlatform} 
         />
         
+        {/* Date Range Selector - Moved to top */}
+        <section className="mb-6">
+          <DateRangeSelector 
+            onDateRangeChange={handleDateRangeChange}
+            currentRange={dateRange}
+          />
+        </section>
+        
         {/* Materialized View Refresher - Only show when refreshing */}
         {isRefreshing && (
           <MaterializedViewRefresher 
@@ -438,9 +493,22 @@ export default function Page() {
               ) : selectedPlatform === 'tiktok' ? (
                 <TotalViewsChart data={safeCurrentData} startDate={dateRange.startDate} endDate={dateRange.endDate} />
               ) : selectedPlatform === 'instagram' ? (
-                <InstagramTotalViewsChart data={safeCurrentData} startDate={dateRange.startDate} endDate={dateRange.endDate} />
+                !metaAnalyticsLoading && metaAnalyticsData.length > 0 ? (
+                  <>
+                    <InstagramViewsChart data={metaAnalyticsData} startDate={dateRange.startDate} endDate={dateRange.endDate} />
+                    <div className="mt-6">
+                      <ProfileVisitsChart data={metaAnalyticsData} startDate={dateRange.startDate} endDate={dateRange.endDate} platform="instagram" />
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-slate-300 py-8 text-center">Loading Instagram meta analytics data...</div>
+                )
               ) : selectedPlatform === 'facebook' ? (
-                <FacebookTotalViewsChart data={safeCurrentData} startDate={dateRange.startDate} endDate={dateRange.endDate} />
+                !metaAnalyticsLoading && metaAnalyticsData.length > 0 ? (
+                  <FacebookViewsChart data={metaAnalyticsData} startDate={dateRange.startDate} endDate={dateRange.endDate} />
+                ) : (
+                  <div className="text-slate-300 py-8 text-center">Loading Facebook meta analytics data...</div>
+                )
               ) : selectedPlatform === 'all_platforms' ? (
                 <AllPlatformsTotalViewsChart 
                   tiktokData={tiktokData} 
@@ -454,33 +522,8 @@ export default function Page() {
               )}
             </section>
 
-            {/* Date Range Selector */}
-            <section className="mb-10">
-              <DateRangeSelector 
-                onDateRangeChange={handleDateRangeChange}
-                currentRange={dateRange}
-              />
-            </section>
-            
-            {/* Account Performance - Single section with dynamic date range */}
-            {selectedPlatform !== 'all_platforms' && (
-              <section className="mb-10">
-                <h3 className="text-lg font-semibold text-white mb-4">Account Performance ({dateRangeText})</h3>
-                {loading ? (
-                  <div className="text-slate-300 py-8 text-center">Loading...</div>
-                ) : currentError ? (
-                  <div className="text-red-400 py-8 text-center">{currentError}</div>
-                ) : selectedPlatform === 'tiktok' ? (
-                  <StatsGrid data={filteredData} uniqueAccounts={loadingAccountCount ? 0 : filteredAccountCount} />
-                ) : selectedPlatform === 'instagram' ? (
-                  <InstagramStatsGrid data={filteredData} uniqueAccounts={loadingAccountCount ? 0 : filteredAccountCount} />
-                ) : selectedPlatform === 'facebook' ? (
-                  <FacebookStatsGrid data={filteredData} uniqueAccounts={loadingAccountCount ? 0 : filteredAccountCount} />
-                ) : (
-                  <StatsGrid data={filteredData} uniqueAccounts={loadingAccountCount ? 0 : filteredAccountCount} />
-                )}
-              </section>
-            )}
+
+
             
             {/* Daily Views Gained and Daily Posts Charts */}
             <section className="backdrop-blur-md bg-white/5 border border-white/10 rounded-2xl shadow-xl p-6 mb-10">
@@ -490,10 +533,17 @@ export default function Page() {
                 <div className="text-red-400 py-8 text-center">{currentError}</div>
               ) : selectedPlatform === 'tiktok' ? (
                 <ViewsChart data={filteredData} />
-              ) : selectedPlatform === 'instagram' ? (
-                <InstagramViewsChart data={filteredData} />
               ) : selectedPlatform === 'facebook' ? (
-                <FacebookViewsChart data={filteredData} />
+                !metaAnalyticsLoading && metaAnalyticsData.length > 0 ? (
+                  <>
+                    <FacebookViewsChart data={metaAnalyticsData} startDate={dateRange.startDate} endDate={dateRange.endDate} />
+                    <div className="mt-6">
+                      <ProfileVisitsChart data={metaAnalyticsData} startDate={dateRange.startDate} endDate={dateRange.endDate} platform="facebook" />
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-slate-300 py-8 text-center">Loading Facebook data...</div>
+                )
               ) : selectedPlatform === 'all_platforms' ? (
                 <>
                   <AllPlatformsDailyViewsChart 
@@ -523,13 +573,18 @@ export default function Page() {
             {selectedPlatform === 'instagram' && (
               <InstagramWeeklyStats data={safeCurrentData} />
             )}
-            {selectedPlatform === 'facebook' && (
-              <FacebookWeeklyStats data={safeCurrentData} />
-            )}
+
             
             {/* Facebook Accounts - Only show for Facebook platform */}
             {selectedPlatform === 'facebook' && (
               <FacebookAccountsCard clientId={selectedClientId} />
+            )}
+            
+            {/* Total Performance Chart - Show below accounts for Facebook */}
+            {selectedPlatform === 'facebook' && !metaAnalyticsLoading && metaAnalyticsData.length > 0 && (
+              <div className="mt-6">
+                <MetaAnalyticsTotalViewsChart data={metaAnalyticsData} startDate={dateRange.startDate} endDate={dateRange.endDate} platform="facebook" />
+              </div>
             )}
             
             {/* Top Posts - Always use unfiltered data */}
@@ -538,6 +593,13 @@ export default function Page() {
             {/* Accounts - Always use unfiltered data */}
             {selectedPlatform !== 'facebook' && selectedPlatform !== 'all_platforms' && (
               <UnifiedAccountsCard platform={selectedPlatform as 'tiktok' | 'instagram'} clientId={selectedClientId} />
+            )}
+            
+            {/* Total Performance Chart - Show below accounts for Instagram */}
+            {selectedPlatform === 'instagram' && !metaAnalyticsLoading && metaAnalyticsData.length > 0 && (
+              <div className="mt-6">
+                <MetaAnalyticsTotalViewsChart data={metaAnalyticsData} startDate={dateRange.startDate} endDate={dateRange.endDate} platform="instagram" />
+              </div>
             )}
       </>
     )}

@@ -54,3 +54,4 @@ export function getAllPlatformColors() {
     CHART_COLORS.facebook.primary
   ];
 }
+

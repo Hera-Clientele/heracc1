@@ -107,3 +107,4 @@ export function formatPercentage(value: number, decimals: number = 1): string {
 export function formatCurrency(value: number, currencySymbol: string = '$'): string {
   return formatNumber(value, { currency: true, currencySymbol });
 }
+
