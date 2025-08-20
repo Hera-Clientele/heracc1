@@ -167,53 +167,7 @@ export default function ViewsChart({ data }: { data: Row[] }) {
         </ResponsiveContainer>
       </div>
       
-      {/* Daily Posts */}
-      <div>
-        <div className="font-semibold text-lg mb-2 text-white">Daily Posts</div>
-        <ResponsiveContainer width="100%" height={200}>
-          <LineChart data={dailyPostsWithInitial} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
-            <defs>
-              <linearGradient id="colorPosts" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#10b981" stopOpacity={0.5}/>
-                <stop offset="100%" stopColor="#10b981" stopOpacity={0.15}/>
-              </linearGradient>
-            </defs>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis
-              dataKey="day"
-              tick={{ fontSize: 12 }}
-              tickFormatter={(date) => date === initialDate ? "" : getDateInAppTimezone(date).format("MM/DD")}
-              interval="preserveStartEnd"
-            />
-            <YAxis 
-              tick={{ fontSize: 12 }} 
-              allowDecimals={false} 
-              domain={[0, 'auto']} 
-              tickFormatter={tick => {
-                if (tick === 0) return '';
-                if (tick >= 1000000) return `${(tick / 1000000).toFixed(1)}M`;
-                if (tick >= 1000) return `${(tick / 1000).toFixed(1)}K`;
-                return tick.toString();
-              }} 
-            />
-            <Tooltip content={<PostsTooltip />} />
-            <Area
-              type="linear"
-              dataKey="posts"
-              stroke="none"
-              fill="url(#colorPosts)"
-            />
-            <Line
-              type="linear"
-              dataKey="posts"
-              stroke="#10b981"
-              strokeWidth={2}
-              dot={{ r: 3 }}
-              activeDot={{ r: 5 }}
-            />
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
+
     </div>
   );
 } 

@@ -22,9 +22,10 @@ const PERIODS = [
 interface DateRangeSelectorProps {
   onDateRangeChange: (dateRange: DateRange) => void;
   currentRange: DateRange;
+  earliestDataDate?: string; // Add prop for earliest available data date
 }
 
-export default function DateRangeSelector({ onDateRangeChange, currentRange }: DateRangeSelectorProps) {
+export default function DateRangeSelector({ onDateRangeChange, currentRange, earliestDataDate }: DateRangeSelectorProps) {
   const [customStartDate, setCustomStartDate] = useState(currentRange.startDate || '');
   const [customEndDate, setCustomEndDate] = useState(currentRange.endDate || '');
   const [customSingleDate, setCustomSingleDate] = useState('');
@@ -69,7 +70,7 @@ export default function DateRangeSelector({ onDateRangeChange, currentRange }: D
         break;
       case 'all':
       default:
-        startDate = '2025-07-07'; // Start from July 7, 2025
+        startDate = earliestDataDate || '2025-07-07'; // Start from July 7, 2025
         endDate = now.format('YYYY-MM-DD');
         break;
     }

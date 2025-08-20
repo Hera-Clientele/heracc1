@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import StatsGrid from './components/StatsGrid';
 import WeeklyStatsGrid from './components/WeeklyStatsGrid';
 import InstagramWeeklyStatsGrid from './components/InstagramWeeklyStatsGrid';
@@ -15,6 +15,7 @@ import InstagramTopPostsCard from './components/InstagramTopPostsCard';
 import FacebookTotalViewsChart from './components/FacebookTotalViewsChart';
 import ProfileVisitsChart from './components/ProfileVisitsChart';
 import MetaAnalyticsTotalViewsChart from './components/MetaAnalyticsTotalViewsChart';
+import MetaAnalyticsDailyPostsChart from './components/MetaAnalyticsDailyPostsChart';
 import FacebookViewsChart from './components/FacebookViewsChart';
 import FacebookStatsGrid from './components/FacebookStatsGrid';
 import FacebookWeeklyStats from './components/FacebookWeeklyStats';
@@ -426,6 +427,18 @@ export default function Page() {
     fetchMetaAnalytics();
   }, [fetchMetaAnalytics]);
 
+  // Calculate earliest available date from meta analytics data
+  const earliestDataDate = useMemo(() => {
+    if (metaAnalyticsData.length === 0) return undefined;
+    
+    const dates = metaAnalyticsData
+      .map(row => row.date || row.day)
+      .filter(date => date) // Filter out undefined/null dates
+      .sort();
+    
+    return dates[0]; // Return the earliest date
+  }, [metaAnalyticsData]);
+
   // Debug logging
   useEffect(() => {
     console.log('Meta Analytics Data:', {
@@ -468,6 +481,7 @@ export default function Page() {
           <DateRangeSelector 
             onDateRangeChange={handleDateRangeChange}
             currentRange={dateRange}
+            earliestDataDate={earliestDataDate}
           />
         </section>
         
@@ -499,6 +513,9 @@ export default function Page() {
                     <div className="mt-6">
                       <ProfileVisitsChart data={metaAnalyticsData} startDate={dateRange.startDate} endDate={dateRange.endDate} platform="instagram" />
                     </div>
+                    <div className="mt-6">
+                      <MetaAnalyticsDailyPostsChart data={metaAnalyticsData} startDate={dateRange.startDate} endDate={dateRange.endDate} platform="instagram" />
+                    </div>
                   </>
                 ) : (
                   <div className="text-slate-300 py-8 text-center">Loading Instagram meta analytics data...</div>
@@ -525,7 +542,7 @@ export default function Page() {
 
 
             
-            {/* Daily Views Gained and Daily Posts Charts */}
+            {/* Daily Views Gained Charts */}
             <section className="backdrop-blur-md bg-white/5 border border-white/10 rounded-2xl shadow-xl p-6 mb-10">
               {loading ? (
                 <div className="text-slate-300 py-8 text-center">Loading...</div>
@@ -533,6 +550,13 @@ export default function Page() {
                 <div className="text-red-400 py-8 text-center">{currentError}</div>
               ) : selectedPlatform === 'tiktok' ? (
                 <ViewsChart data={filteredData} />
+              ) : selectedPlatform === 'instagram' ? (
+                // Show daily views gained for Instagram
+                !metaAnalyticsLoading && metaAnalyticsData.length > 0 ? (
+                  <ViewsChart data={filteredData} />
+                ) : (
+                  <div className="text-slate-300 py-8 text-center">Loading Instagram data...</div>
+                )
               ) : selectedPlatform === 'facebook' ? (
                 !metaAnalyticsLoading && metaAnalyticsData.length > 0 ? (
                   <>
@@ -540,6 +564,7 @@ export default function Page() {
                     <div className="mt-6">
                       <ProfileVisitsChart data={metaAnalyticsData} startDate={dateRange.startDate} endDate={dateRange.endDate} platform="facebook" />
                     </div>
+
                   </>
                 ) : (
                   <div className="text-slate-300 py-8 text-center">Loading Facebook data...</div>

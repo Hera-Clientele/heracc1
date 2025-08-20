@@ -13,6 +13,7 @@ export interface MetaAnalyticsMetric {
   views: number;
   reach: number;
   profile_visits: number;
+  num_posts?: number; // Make num_posts optional
   client_id: number;
 }
 
@@ -22,6 +23,7 @@ export interface DailyTotalsRow {
   total_views: number;
   total_reach: number;
   total_profile_visits: number;
+  total_posts: number; // Add total_posts field
   total_accounts: number;
   active_accounts: number;
   account_usernames?: string; // New field from joined accounts
@@ -85,6 +87,7 @@ export async function fetchMetaAnalyticsDailyAgg(clientId: string, platform?: 'i
       total_views: row.total_views || 0,
       total_reach: row.total_reach || 0,
       total_profile_visits: row.total_profile_visits || 0,
+      total_posts: row.total_posts || 0, // Add total_posts to mapped data
       total_accounts: row.total_accounts || 0,
       active_accounts: row.active_accounts || 0,
       account_usernames: row.account_usernames || '',
@@ -197,6 +200,7 @@ export async function upsertMetaAnalytics(metrics: MetaAnalyticsMetric[]): Promi
           p_views: metric.views,
           p_reach: metric.reach,
           p_profile_visits: metric.profile_visits,
+          p_num_posts: metric.num_posts || 0,
           p_client_id: metric.client_id
         });
       })
@@ -249,6 +253,7 @@ export async function syncFromGoogleSheets(sheetData: any[]): Promise<string> {
         views: parseInt(row.Views) || 0,
         reach: parseInt(row.Reach) || 0,
         profile_visits: parseInt(row['Instagram Profile Visit']) || 0,
+        num_posts: parseInt(row['Instagram Posts']) || 0, // Add num_posts
         client_id: mapping.client_id
       });
     }
