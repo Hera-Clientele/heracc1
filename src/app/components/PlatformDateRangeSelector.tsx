@@ -24,17 +24,37 @@ const PERIODS = [
   { label: "All time", value: 'all' },
 ];
 
-interface DateRangeSelectorProps {
+interface PlatformDateRangeSelectorProps {
+  platform: 'tiktok' | 'instagram' | 'facebook' | 'all_platforms';
   onDateRangeChange: (dateRange: DateRange) => void;
   currentRange: DateRange;
-  earliestDataDate?: string; // Add prop for earliest available data date
+  earliestDataDate?: string;
 }
 
-export default function DateRangeSelector({ onDateRangeChange, currentRange, earliestDataDate }: DateRangeSelectorProps) {
+export default function PlatformDateRangeSelector({ 
+  platform, 
+  onDateRangeChange, 
+  currentRange, 
+  earliestDataDate 
+}: PlatformDateRangeSelectorProps) {
   const [customStartDate, setCustomStartDate] = useState(currentRange.startDate || '');
   const [customEndDate, setCustomEndDate] = useState(currentRange.endDate || '');
   const [customSingleDate, setCustomSingleDate] = useState('');
 
+
+  const platformColors = {
+    tiktok: 'from-black to-gray-800',
+    instagram: 'from-pink-800 to-purple-700',
+    facebook: 'from-blue-800 to-blue-700',
+    all_platforms: 'from-gray-700 to-slate-600'
+  };
+
+  const platformIcons = {
+    tiktok: '🎵',
+    instagram: '📸',
+    facebook: '📘',
+    all_platforms: '🌐'
+  };
 
   const handlePeriodChange = (period: string) => {
     const now = getCurrentTimeInAppTimezone();
@@ -96,7 +116,7 @@ export default function DateRangeSelector({ onDateRangeChange, currentRange, ear
         break;
       case 'all':
       default:
-        startDate = earliestDataDate || '2025-07-07'; // Start from July 7, 2025
+        startDate = earliestDataDate || '2025-07-07';
         endDate = now.format('YYYY-MM-DD');
         break;
     }
@@ -136,12 +156,14 @@ export default function DateRangeSelector({ onDateRangeChange, currentRange, ear
   };
 
   return (
-    <div className="bg-gradient-to-r from-slate-800 to-slate-700 border border-slate-600 rounded-xl p-6 shadow-lg">
+    <div className={`bg-gradient-to-r ${platformColors[platform]} border border-slate-600 rounded-xl p-4 shadow-lg`}>
       <div className="flex flex-col lg:flex-row items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
-          <h3 className="text-lg font-semibold text-white">Date Range</h3>
-          <span className="text-slate-300 text-sm">
+          <div className="text-2xl">{platformIcons[platform]}</div>
+          <h3 className="text-lg font-semibold text-white">
+            {platform === 'all_platforms' ? 'All Platforms' : platform.charAt(0).toUpperCase() + platform.slice(1)} Date Range
+          </h3>
+          <span className="text-slate-200 text-sm">
             {formatDateRange(currentRange.startDate, currentRange.endDate)}
           </span>
         </div>
@@ -152,7 +174,7 @@ export default function DateRangeSelector({ onDateRangeChange, currentRange, ear
             <select
               value={currentRange.period}
               onChange={(e) => handlePeriodChange(e.target.value)}
-              className="bg-slate-900 text-white border border-slate-500 rounded-lg px-4 py-3 text-base font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none cursor-pointer min-w-[180px]"
+              className="bg-slate-900 text-white border border-slate-500 rounded-lg px-4 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none cursor-pointer min-w-[160px]"
             >
               {PERIODS.map((period) => (
                 <option key={period.value} value={period.value}>
@@ -161,7 +183,7 @@ export default function DateRangeSelector({ onDateRangeChange, currentRange, ear
               ))}
             </select>
             <div className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
-              <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
               </svg>
             </div>
@@ -174,20 +196,20 @@ export default function DateRangeSelector({ onDateRangeChange, currentRange, ear
                 type="date"
                 value={customStartDate}
                 onChange={(e) => setCustomStartDate(e.target.value)}
-                className="bg-slate-700 text-white border border-slate-600 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="bg-slate-700 text-white border border-slate-600 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
                 max={customEndDate || undefined}
               />
-              <span className="text-slate-400 text-sm">to</span>
+              <span className="text-slate-300 text-xs">to</span>
               <input
                 type="date"
                 value={customEndDate}
                 onChange={(e) => setCustomEndDate(e.target.value)}
-                className="bg-slate-700 text-white border border-slate-600 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="bg-slate-700 text-white border border-slate-600 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
                 min={customStartDate || undefined}
               />
               <button
                 onClick={handleCustomRangeChange}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded text-sm font-medium transition-colors"
+                className="bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded text-xs font-medium transition-colors"
               >
                 Apply
               </button>
@@ -201,11 +223,11 @@ export default function DateRangeSelector({ onDateRangeChange, currentRange, ear
                 type="date"
                 value={customSingleDate}
                 onChange={(e) => setCustomSingleDate(e.target.value)}
-                className="bg-slate-700 text-white border border-slate-600 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="bg-slate-700 text-white border border-slate-600 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
               />
               <button
                 onClick={handleCustomSingleChange}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded text-sm font-medium transition-colors"
+                className="bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded text-xs font-medium transition-colors"
               >
                 Apply
               </button>
@@ -216,4 +238,4 @@ export default function DateRangeSelector({ onDateRangeChange, currentRange, ear
       </div>
     </div>
   );
-} 
+}

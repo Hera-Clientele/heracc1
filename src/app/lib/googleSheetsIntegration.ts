@@ -185,3 +185,4 @@ export async function syncFromGoogleSheets(sheetData: any[]): Promise<string> {
 export function getAccountMapping(): Record<string, { client_id: number; platform: 'instagram' | 'facebook' }> {
   return ACCOUNT_MAPPING;
 }
+
