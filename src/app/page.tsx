@@ -155,46 +155,46 @@ export default function Page() {
   // Global date range state for All Platforms
   const [dateRange, setDateRange] = useState<DateRange>(() => {
     const now = getCurrentTimeInAppTimezone();
-    const lastYearStart = now.subtract(1, 'year').startOf('year');
-    const lastYearEnd = now.subtract(1, 'year').endOf('year');
+    const thisMonthStart = now.startOf('month');
+    const thisMonthEnd = now.endOf('month');
     return {
-      startDate: lastYearStart.format('YYYY-MM-DD'),
-      endDate: lastYearEnd.format('YYYY-MM-DD'),
-      period: 'last_year'
+      startDate: thisMonthStart.format('YYYY-MM-DD'),
+      endDate: thisMonthEnd.format('YYYY-MM-DD'),
+      period: 'this_month'
     };
   });
 
   // Separate date ranges for each platform
   const [tiktokDateRange, setTiktokDateRange] = useState<DateRange>(() => {
     const now = getCurrentTimeInAppTimezone();
-    const lastYearStart = now.subtract(1, 'year').startOf('year');
-    const lastYearEnd = now.subtract(1, 'year').endOf('year');
+    const thisMonthStart = now.startOf('month');
+    const thisMonthEnd = now.endOf('month');
     return {
-      startDate: lastYearStart.format('YYYY-MM-DD'),
-      endDate: lastYearEnd.format('YYYY-MM-DD'),
-      period: 'last_year'
+      startDate: thisMonthStart.format('YYYY-MM-DD'),
+      endDate: thisMonthEnd.format('YYYY-MM-DD'),
+      period: 'this_month'
     };
   });
 
   const [instagramDateRange, setInstagramDateRange] = useState<DateRange>(() => {
     const now = getCurrentTimeInAppTimezone();
-    const lastYearStart = now.subtract(1, 'year').startOf('year');
-    const lastYearEnd = now.subtract(1, 'year').endOf('year');
+    const thisMonthStart = now.startOf('month');
+    const thisMonthEnd = now.endOf('month');
     return {
-      startDate: lastYearStart.format('YYYY-MM-DD'),
-      endDate: lastYearEnd.format('YYYY-MM-DD'),
-      period: 'last_year'
+      startDate: thisMonthStart.format('YYYY-MM-DD'),
+      endDate: thisMonthEnd.format('YYYY-MM-DD'),
+      period: 'this_month'
     };
   });
 
   const [facebookDateRange, setFacebookDateRange] = useState<DateRange>(() => {
     const now = getCurrentTimeInAppTimezone();
-    const lastYearStart = now.subtract(1, 'year').startOf('year');
-    const lastYearEnd = now.subtract(1, 'year').endOf('year');
+    const thisMonthStart = now.startOf('month');
+    const thisMonthEnd = now.endOf('month');
     return {
-      startDate: lastYearStart.format('YYYY-MM-DD'),
-      endDate: lastYearEnd.format('YYYY-MM-DD'),
-      period: 'last_year'
+      startDate: thisMonthStart.format('YYYY-MM-DD'),
+      endDate: thisMonthEnd.format('YYYY-MM-DD'),
+      period: 'this_month'
     };
   });
 
