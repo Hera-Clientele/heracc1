@@ -2,11 +2,13 @@ import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
 import isoWeek from 'dayjs/plugin/isoWeek';
+import weekOfYear from 'dayjs/plugin/weekOfYear';
 
 // Extend dayjs with timezone plugins
 dayjs.extend(utc);
 dayjs.extend(timezone);
 dayjs.extend(isoWeek);
+dayjs.extend(weekOfYear);
 
 // Centralized timezone configuration
 export const APP_TIMEZONE = 'America/New_York';
@@ -42,9 +44,13 @@ export function getWeekStartInAppTimezone() {
   try {
     const now = getCurrentTimeInAppTimezone();
     if (typeof now.startOf === 'function') {
-      return now.startOf('isoWeek').format('YYYY-MM-DD');
+      try {
+        return now.startOf('isoWeek').format('YYYY-MM-DD');
+      } catch {
+        return now.startOf('week').format('YYYY-MM-DD');
+      }
     } else {
-      return now.startOf('week').format('YYYY-MM-DD');
+      return now.format('YYYY-MM-DD');
     }
   } catch (error) {
     console.error('Error in getWeekStartInAppTimezone:', error);
@@ -56,9 +62,13 @@ export function getWeekEndInAppTimezone() {
   try {
     const now = getCurrentTimeInAppTimezone();
     if (typeof now.endOf === 'function') {
-      return now.endOf('isoWeek').format('YYYY-MM-DD');
+      try {
+        return now.endOf('isoWeek').format('YYYY-MM-DD');
+      } catch {
+        return now.endOf('week').format('YYYY-MM-DD');
+      }
     } else {
-      return now.endOf('week').format('YYYY-MM-DD');
+      return now.format('YYYY-MM-DD');
     }
   } catch (error) {
     console.error('Error in getWeekEndInAppTimezone:', error);
@@ -122,9 +132,15 @@ export function getCurrentWeekNumber() {
     const now = getCurrentTimeInAppTimezone();
     if (typeof now.isoWeek === 'function') {
       return now.isoWeek();
-    } else {
+    } else if (typeof now.week === 'function') {
       console.warn('isoWeek method not available, using week() instead');
       return now.week();
+    } else {
+      console.warn('Week methods not available, using manual calculation');
+      // Manual week calculation as fallback
+      const startOfYear = now.startOf('year');
+      const diffInDays = now.diff(startOfYear, 'day');
+      return Math.ceil((diffInDays + 1) / 7);
     }
   } catch (error) {
     console.error('Error in getCurrentWeekNumber:', error);
