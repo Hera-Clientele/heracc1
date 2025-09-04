@@ -138,3 +138,4 @@ CREATE POLICY "Service role can manage all data" ON google_sheets_metrics
     FOR ALL USING (auth.role() = 'service_role');
 
 
+

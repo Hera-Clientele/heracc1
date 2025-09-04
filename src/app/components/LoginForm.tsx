@@ -1,15 +1,18 @@
 "use client";
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 interface LoginFormProps {
-  onLogin: (clientId: string, model: string) => void;
+  onLogin?: (clientId: string, model: string) => void;
+  redirectToClient?: boolean;
 }
 
-export default function LoginForm({ onLogin }: LoginFormProps) {
+export default function LoginForm({ onLogin, redirectToClient = false }: LoginFormProps) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,7 +31,13 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
       const data = await response.json();
 
       if (response.ok && data.success) {
-        onLogin(data.client_id, data.model);
+        if (redirectToClient) {
+          // Redirect to the client's dedicated page
+          router.push(`/client/${data.client_id}`);
+        } else if (onLogin) {
+          // Use the callback for backward compatibility
+          onLogin(data.client_id, data.model);
+        }
       } else {
         setError(data.error || 'Login failed');
       }

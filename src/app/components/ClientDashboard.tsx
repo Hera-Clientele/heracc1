@@ -1,48 +1,45 @@
 "use client";
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import StatsGrid from './components/StatsGrid';
-import WeeklyStatsGrid from './components/WeeklyStatsGrid';
-import InstagramWeeklyStatsGrid from './components/InstagramWeeklyStatsGrid';
-import ViewsChart from './components/ViewsChart';
-import TotalViewsChart from './components/TotalViewsChart';
-import InstagramTotalViewsChart from './components/InstagramTotalViewsChart';
-import DateRangeSelector, { DateRange } from './components/DateRangeSelector';
-import PlatformDateRangeSelector from './components/PlatformDateRangeSelector';
-import TopPostsCard from './components/TopPostsCard';
-import AccountsCard from './components/AccountsCard';
-import InstagramStatsGrid from './components/InstagramStatsGrid';
-import InstagramViewsChart from './components/InstagramViewsChart';
-import InstagramTopPostsCard from './components/InstagramTopPostsCard';
-import FacebookTotalViewsChart from './components/FacebookTotalViewsChart';
-import ProfileVisitsChart from './components/ProfileVisitsChart';
-import MetaAnalyticsTotalViewsChart from './components/MetaAnalyticsTotalViewsChart';
-import MetaAnalyticsDailyPostsChart from './components/MetaAnalyticsDailyPostsChart';
-import FacebookViewsChart from './components/FacebookViewsChart';
-import FacebookStatsGrid from './components/FacebookStatsGrid';
-import FacebookWeeklyStats from './components/FacebookWeeklyStats';
-import MetaAnalyticsStatsGrid from './components/MetaAnalyticsStatsGrid';
-import FacebookAccountsCard from './components/FacebookAccountsCard';
-import AllPlatformsTotalViewsChart from './components/AllPlatformsTotalViewsChart';
-import AllPlatformsDailyViewsChart from './components/AllPlatformsDailyViewsChart';
-import AllPlatformsDailyPostsChart from './components/AllPlatformsDailyPostsChart';
-// InstagramAccountsCard is no longer used - using UnifiedAccountsCard instead
-import UnifiedAccountsCard from './components/UnifiedAccountsCard';
-import PlatformSelector, { Platform } from './components/PlatformSelector';
-import ClientSelector from './components/ClientSelector';
-import ContentQueueCard from './components/ContentQueueCard';
-import MaterializedViewRefresher from './components/MaterializedViewRefresher';
-import MaterializedViewsRefresher from './components/AccountHealthRefresher';
-import { useMaterializedViewRefresh } from './hooks/useMaterializedViewRefresh';
-import type { Row } from './lib/fetchDailyAgg';
-import type { AccountWithViews } from './lib/fetchAccountsWithViews';
+import StatsGrid from './StatsGrid';
+import WeeklyStatsGrid from './WeeklyStatsGrid';
+import InstagramWeeklyStatsGrid from './InstagramWeeklyStatsGrid';
+import ViewsChart from './ViewsChart';
+import TotalViewsChart from './TotalViewsChart';
+import InstagramTotalViewsChart from './InstagramTotalViewsChart';
+import DateRangeSelector, { DateRange } from './DateRangeSelector';
+import PlatformDateRangeSelector from './PlatformDateRangeSelector';
+import TopPostsCard from './TopPostsCard';
+import AccountsCard from './AccountsCard';
+import InstagramStatsGrid from './InstagramStatsGrid';
+import InstagramViewsChart from './InstagramViewsChart';
+import InstagramTopPostsCard from './InstagramTopPostsCard';
+import FacebookTotalViewsChart from './FacebookTotalViewsChart';
+import ProfileVisitsChart from './ProfileVisitsChart';
+import MetaAnalyticsTotalViewsChart from './MetaAnalyticsTotalViewsChart';
+import MetaAnalyticsDailyPostsChart from './MetaAnalyticsDailyPostsChart';
+import FacebookViewsChart from './FacebookViewsChart';
+import FacebookStatsGrid from './FacebookStatsGrid';
+import FacebookWeeklyStats from './FacebookWeeklyStats';
+import MetaAnalyticsStatsGrid from './MetaAnalyticsStatsGrid';
+import FacebookAccountsCard from './FacebookAccountsCard';
+import AllPlatformsTotalViewsChart from './AllPlatformsTotalViewsChart';
+import AllPlatformsDailyViewsChart from './AllPlatformsDailyViewsChart';
+import AllPlatformsDailyPostsChart from './AllPlatformsDailyPostsChart';
+import UnifiedAccountsCard from './UnifiedAccountsCard';
+import PlatformSelector, { Platform } from './PlatformSelector';
+import ContentQueueCard from './ContentQueueCard';
+import MaterializedViewRefresher from './MaterializedViewRefresher';
+import MaterializedViewsRefresher from './AccountHealthRefresher';
+import { useMaterializedViewRefresh } from '../hooks/useMaterializedViewRefresh';
+import type { Row } from '../lib/fetchDailyAgg';
+import type { AccountWithViews } from '../lib/fetchAccountsWithViews';
 import { createClient } from '@supabase/supabase-js';
-import { fetchInstagramDailyAgg } from './lib/fetchInstagramDailyAgg';
-import { fetchFacebookDailyAgg } from './lib/fetchFacebookDailyAgg';
-import InstagramWeeklyStats from './components/InstagramWeeklyStats';
-import TikTokWeeklyStats from './components/TikTokWeeklyStats';
-import TimezoneDebug from './components/TimezoneDebug';
-import { getCurrentTimeInAppTimezone } from './lib/timezone';
-import LoginForm from './components/LoginForm';
+import { fetchInstagramDailyAgg } from '../lib/fetchInstagramDailyAgg';
+import { fetchFacebookDailyAgg } from '../lib/fetchFacebookDailyAgg';
+import InstagramWeeklyStats from './InstagramWeeklyStats';
+import TikTokWeeklyStats from './TikTokWeeklyStats';
+import TimezoneDebug from './TimezoneDebug';
+import { getCurrentTimeInAppTimezone } from '../lib/timezone';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -57,7 +54,7 @@ function filterDataByDateRange(data: any[] | null | undefined, startDate: string
   if (!startDate || !endDate) return data;
   
   // Import timezone functions here to avoid circular dependency
-  const { getDateInAppTimezone } = require('./lib/timezone');
+  const { getDateInAppTimezone } = require('../lib/timezone');
   
   const start = getDateInAppTimezone(startDate);
   const end = getDateInAppTimezone(endDate);
@@ -72,7 +69,7 @@ function filterDataByDateRange(data: any[] | null | undefined, startDate: string
 function formatDateRangeForDisplay(startDate: string, endDate: string, period: string): string {
   if (!startDate || !endDate) return 'All Time';
   
-  const { getDateInAppTimezone } = require('./lib/timezone');
+  const { getDateInAppTimezone } = require('../lib/timezone');
   const start = getDateInAppTimezone(startDate);
   const end = getDateInAppTimezone(endDate);
   
@@ -113,9 +110,12 @@ function formatDateRangeForDisplay(startDate: string, endDate: string, period: s
   }
 }
 
-export default function Page() {
-  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
-  const [selectedClientId, setSelectedClientId] = useState('1');
+interface ClientDashboardProps {
+  clientId: string;
+  clientName?: string;
+}
+
+export default function ClientDashboard({ clientId, clientName }: ClientDashboardProps) {
   const [selectedPlatform, setSelectedPlatform] = useState<Platform>('instagram');
   const [tiktokData, setTiktokData] = useState<Row[]>([]);
   const [tiktokAccounts, setTiktokAccounts] = useState<AccountWithViews[]>([]);
@@ -208,7 +208,7 @@ export default function Page() {
   const fetchAccountCountForDateRange = async (startDate: string, endDate: string, platform: string) => {
     setLoadingAccountCount(true);
     try {
-      const response = await fetch(`/api/accounts-by-date?startDate=${startDate}&endDate=${endDate}&platform=${platform}&clientId=${selectedClientId}`);
+      const response = await fetch(`/api/accounts-by-date?startDate=${startDate}&endDate=${endDate}&platform=${platform}&clientId=${clientId}`);
       if (response.ok) {
         const data = await response.json();
         setFilteredAccountCount(data.uniqueAccounts);
@@ -227,18 +227,6 @@ export default function Page() {
   };
 
   async function fetchAll() {
-    if (selectedClientId === 'all') {
-      // For "all clients", we'll show empty data or handle differently
-      setTiktokData([]);
-      setTiktokAccounts([]);
-      setInstagramData([]);
-      setInstagramAccounts([]);
-      setFacebookData([]);
-      setInstagramUniqueAccounts(0);
-      setLoading(false);
-      return;
-    }
-    
     setLoading(true);
     setTiktokError(null);
     setInstagramError(null);
@@ -250,8 +238,8 @@ export default function Page() {
       
       // Fetch TikTok data using the new unified accounts API
       const [tiktokAggRes, tiktokAccRes] = await Promise.all([
-        fetch(`/api/daily-agg?clientId=${selectedClientId}`, { cache: 'no-store' }),
-        fetch(`/api/accounts?platform=tiktok&clientId=${selectedClientId}`, { cache: 'no-store' })
+        fetch(`/api/daily-agg?clientId=${clientId}`, { cache: 'no-store' }),
+        fetch(`/api/accounts?platform=tiktok&clientId=${clientId}`, { cache: 'no-store' })
       ]);
       
       if (!tiktokAggRes.ok || !tiktokAccRes.ok) throw new Error('Failed to fetch TikTok dashboard data');
@@ -265,7 +253,7 @@ export default function Page() {
       // Fetch Instagram daily aggregates
       let instagramAggData: any[] = [];
       try {
-        const res = await fetch(`/api/instagram/daily-agg?clientId=${selectedClientId}`, { cache: 'no-store' });
+        const res = await fetch(`/api/instagram/daily-agg?clientId=${clientId}`, { cache: 'no-store' });
         if (res.ok) {
           const json = await res.json();
           instagramAggData = json.data || [];
@@ -279,7 +267,7 @@ export default function Page() {
 
       // Fetch Instagram accounts using the new unified accounts API
       try {
-        const res = await fetch(`/api/accounts?platform=instagram&clientId=${selectedClientId}`, { cache: 'no-store' });
+        const res = await fetch(`/api/accounts?platform=instagram&clientId=${clientId}`, { cache: 'no-store' });
         if (res.ok) {
           const json = await res.json();
           setInstagramUniqueAccounts(json.accounts.length || 0);
@@ -294,7 +282,7 @@ export default function Page() {
       // Fetch Facebook daily aggregates
       let facebookAggData: any[] = [];
       try {
-        const res = await fetch(`/api/facebook/daily-agg?clientId=${selectedClientId}`, { cache: 'no-store' });
+        const res = await fetch(`/api/facebook/daily-agg?clientId=${clientId}`, { cache: 'no-store' });
         if (res.ok) {
           const json = await res.json();
           facebookAggData = json.data || [];
@@ -327,15 +315,10 @@ export default function Page() {
     return () => {
       channels.forEach(channel => supabase.removeChannel(channel));
     };
-  }, [selectedClientId]);
+  }, [clientId]);
 
   // Fetch account count when date range changes
   useEffect(() => {
-    if (selectedClientId === 'all') {
-      setFilteredAccountCount(0);
-      return;
-    }
-
     let startDate = '';
     let endDate = '';
     
@@ -364,7 +347,7 @@ export default function Page() {
     if (startDate && endDate) {
       fetchAccountCountForDateRange(startDate, endDate, selectedPlatform);
     }
-  }, [tiktokDateRange, instagramDateRange, facebookDateRange, dateRange, selectedPlatform, selectedClientId]);
+  }, [tiktokDateRange, instagramDateRange, facebookDateRange, dateRange, selectedPlatform, clientId]);
 
   // Function to aggregate data from all platforms
   const getAggregatedData = () => {
@@ -497,8 +480,6 @@ export default function Page() {
 
   const filteredData = getFilteredData(selectedPlatform);
 
-
-
   const handleTiktokDateRangeChange = (newRange: DateRange) => {
     setTiktokDateRange(newRange);
   };
@@ -554,15 +535,9 @@ export default function Page() {
   const [metaAnalyticsLoading, setMetaAnalyticsLoading] = useState(true);
 
   const fetchMetaAnalytics = useCallback(async () => {
-    if (!selectedClientId || selectedClientId === 'all') {
-      setMetaAnalyticsData([]);
-      setMetaAnalyticsLoading(false);
-      return;
-    }
-
     try {
       setMetaAnalyticsLoading(true);
-      const response = await fetch(`/api/meta-analytics/daily-agg?clientId=${selectedClientId}`);
+      const response = await fetch(`/api/meta-analytics/daily-agg?clientId=${clientId}`);
       if (response.ok) {
         const result = await response.json();
         setMetaAnalyticsData(result.data || []);
@@ -576,7 +551,7 @@ export default function Page() {
     } finally {
       setMetaAnalyticsLoading(false);
     }
-  }, [selectedClientId]);
+  }, [clientId]);
 
   // Fetch meta analytics data when client changes
   useEffect(() => {
@@ -605,33 +580,6 @@ export default function Page() {
     });
   }, [metaAnalyticsData, metaAnalyticsLoading, selectedPlatform]);
 
-  // Check admin authentication on component mount
-  useEffect(() => {
-    const checkAdminAuth = () => {
-      const isAdmin = localStorage.getItem('isAdmin') === 'true';
-      setIsAdminAuthenticated(isAdmin);
-    };
-    
-    checkAdminAuth();
-  }, []);
-
-  const handleAdminLogin = (clientId: string, model: string) => {
-    // For admin access, we'll use a special client ID or check if it's admin
-    // For now, let's assume admin has client ID "admin" or we can check against a special admin client
-    if (clientId === 'admin' || model === 'admin') {
-      localStorage.setItem('isAdmin', 'true');
-      setIsAdminAuthenticated(true);
-    } else {
-      // Regular client - redirect to their page
-      window.location.href = `/client/${clientId}`;
-    }
-  };
-
-  // Show login form if not authenticated as admin
-  if (!isAdminAuthenticated) {
-    return <LoginForm onLogin={handleAdminLogin} />;
-  }
-
   return (
     <main className="min-h-screen bg-gradient-to-br from-[#18181b] to-[#23272f] flex flex-col items-center py-12 font-sans">
       <div className="w-full max-w-4xl">
@@ -640,30 +588,12 @@ export default function Page() {
             <div className="flex items-center gap-3">
               <img src="/hera.png" alt="Hera Logo" className="h-10 w-10" />
               <h1 className="text-4xl font-extrabold text-white tracking-tight drop-shadow">
-                Hera Dashboard - Admin
+                {clientName ? `${clientName}'s Dashboard` : 'Hera Dashboard'}
               </h1>
             </div>
-            <div className="flex items-center gap-4">
-              <MaterializedViewsRefresher />
-              <button
-                onClick={() => {
-                  localStorage.removeItem('isAdmin');
-                  setIsAdminAuthenticated(false);
-                }}
-                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors duration-200"
-              >
-                Logout
-              </button>
-            </div>
+            <MaterializedViewsRefresher />
           </div>
         </header>
-        
-        <div className="mb-6">
-          <ClientSelector 
-            selectedClientId={selectedClientId} 
-            onClientChange={setSelectedClientId} 
-          />
-        </div>
         
         <PlatformSelector 
           selectedPlatform={selectedPlatform} 
@@ -734,8 +664,6 @@ export default function Page() {
                 <div className="text-slate-300 py-8 text-center">Loading...</div>
               ) : currentError ? (
                 <div className="text-red-400 py-8 text-center">{currentError}</div>
-              ) : selectedPlatform === 'tiktok' ? (
-                <TotalViewsChart data={safeCurrentData} startDate={tiktokDateRange.startDate} endDate={tiktokDateRange.endDate} />
               ) : selectedPlatform === 'instagram' ? (
                 !metaAnalyticsLoading && metaAnalyticsData.length > 0 ? (
                   <>
@@ -750,6 +678,8 @@ export default function Page() {
                 ) : (
                   <div className="text-slate-300 py-8 text-center">Loading Instagram meta analytics data...</div>
                 )
+              ) : selectedPlatform === 'tiktok' ? (
+                <TotalViewsChart data={safeCurrentData} startDate={tiktokDateRange.startDate} endDate={tiktokDateRange.endDate} />
               ) : selectedPlatform === 'facebook' ? (
                 !metaAnalyticsLoading && metaAnalyticsData.length > 0 ? (
                   <>
@@ -774,9 +704,6 @@ export default function Page() {
               )}
             </section>
 
-
-
-            
             {/* Daily Views Gained Charts - Hidden for Instagram */}
             {selectedPlatform !== 'instagram' && (
               <section className="backdrop-blur-md bg-white/5 border border-white/10 rounded-2xl shadow-xl p-6 mb-10">
@@ -822,17 +749,16 @@ export default function Page() {
             )}
             
             {/* Weekly Statistics - Hidden for now */}
-            {/* {selectedPlatform === 'tiktok' && (
-              <TikTokWeeklyStats data={safeCurrentData} />
-            )}
-            {selectedPlatform === 'instagram' && (
+            {/* {selectedPlatform === 'instagram' && (
               <InstagramWeeklyStats data={safeCurrentData} />
+            )}
+            {selectedPlatform === 'tiktok' && (
+              <TikTokWeeklyStats data={safeCurrentData} />
             )} */}
 
-            
             {/* Facebook Accounts - Only show for Facebook platform */}
             {selectedPlatform === 'facebook' && (
-              <FacebookAccountsCard clientId={selectedClientId} />
+              <FacebookAccountsCard clientId={clientId} />
             )}
             
             {/* Total Performance Chart - Show below accounts for Facebook */}
@@ -843,11 +769,11 @@ export default function Page() {
             )}
             
             {/* Top Posts - Hidden for now */}
-            {/* {selectedPlatform === 'tiktok' ? <TopPostsCard clientId={selectedClientId} /> : selectedPlatform === 'instagram' ? <InstagramTopPostsCard clientId={selectedClientId} /> : null} */}
+            {/* {selectedPlatform === 'instagram' ? <InstagramTopPostsCard clientId={clientId} /> : selectedPlatform === 'tiktok' ? <TopPostsCard clientId={clientId} /> : null} */}
             
             {/* Accounts - Always use unfiltered data */}
             {selectedPlatform !== 'facebook' && selectedPlatform !== 'all_platforms' && (
-              <UnifiedAccountsCard platform={selectedPlatform as 'tiktok' | 'instagram'} clientId={selectedClientId} />
+              <UnifiedAccountsCard platform={selectedPlatform as 'instagram' | 'tiktok'} clientId={clientId} />
             )}
             
             {/* Total Performance Chart - Show below accounts for Instagram */}
@@ -856,13 +782,13 @@ export default function Page() {
                 <MetaAnalyticsTotalViewsChart data={metaAnalyticsData} startDate={instagramDateRange.startDate} endDate={instagramDateRange.endDate} platform="instagram" />
               </div>
             )}
-      </>
-    )}
+          </>
+        )}
 
-    {/* Content for Scheduled Posts platform */}
-    {selectedPlatform === 'scheduled' && (
-      <ContentQueueCard clientId={selectedClientId} />
-    )}
+        {/* Content for Scheduled Posts platform */}
+        {selectedPlatform === 'scheduled' && (
+          <ContentQueueCard clientId={clientId} />
+        )}
       </div>
       
       {/* Timezone Debug Component */}
@@ -870,4 +796,3 @@ export default function Page() {
     </main>
   );
 }
-
