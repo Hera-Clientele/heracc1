@@ -1,21 +1,33 @@
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
+import isoWeek from 'dayjs/plugin/isoWeek';
 
 // Extend dayjs with timezone plugins
 dayjs.extend(utc);
 dayjs.extend(timezone);
+dayjs.extend(isoWeek);
 
 // Centralized timezone configuration
 export const APP_TIMEZONE = 'America/New_York';
 
 // Helper functions for consistent timezone handling
 export function getCurrentTimeInAppTimezone() {
-  return dayjs().tz(APP_TIMEZONE);
+  try {
+    return dayjs().tz(APP_TIMEZONE);
+  } catch (error) {
+    console.error('Error in getCurrentTimeInAppTimezone:', error);
+    return dayjs(); // Fallback to regular dayjs
+  }
 }
 
 export function getDateInAppTimezone(date: string | Date | dayjs.Dayjs) {
-  return dayjs(date).tz(APP_TIMEZONE);
+  try {
+    return dayjs(date).tz(APP_TIMEZONE);
+  } catch (error) {
+    console.error('Error in getDateInAppTimezone:', error);
+    return dayjs(date); // Fallback to regular dayjs
+  }
 }
 
 export function getTodayInAppTimezone() {
@@ -27,11 +39,31 @@ export function getYesterdayInAppTimezone() {
 }
 
 export function getWeekStartInAppTimezone() {
-  return getCurrentTimeInAppTimezone().startOf('isoWeek').format('YYYY-MM-DD');
+  try {
+    const now = getCurrentTimeInAppTimezone();
+    if (typeof now.startOf === 'function') {
+      return now.startOf('isoWeek').format('YYYY-MM-DD');
+    } else {
+      return now.startOf('week').format('YYYY-MM-DD');
+    }
+  } catch (error) {
+    console.error('Error in getWeekStartInAppTimezone:', error);
+    return getCurrentTimeInAppTimezone().format('YYYY-MM-DD');
+  }
 }
 
 export function getWeekEndInAppTimezone() {
-  return getCurrentTimeInAppTimezone().endOf('isoWeek').format('YYYY-MM-DD');
+  try {
+    const now = getCurrentTimeInAppTimezone();
+    if (typeof now.endOf === 'function') {
+      return now.endOf('isoWeek').format('YYYY-MM-DD');
+    } else {
+      return now.endOf('week').format('YYYY-MM-DD');
+    }
+  } catch (error) {
+    console.error('Error in getWeekEndInAppTimezone:', error);
+    return getCurrentTimeInAppTimezone().format('YYYY-MM-DD');
+  }
 }
 
 export function getMonthStartInAppTimezone() {
@@ -86,7 +118,18 @@ export function getDateRangeForPeriod(period: 'today' | 'yesterday' | '3days' | 
 
 // Week number helper
 export function getCurrentWeekNumber() {
-  return getCurrentTimeInAppTimezone().isoWeek();
+  try {
+    const now = getCurrentTimeInAppTimezone();
+    if (typeof now.isoWeek === 'function') {
+      return now.isoWeek();
+    } else {
+      console.warn('isoWeek method not available, using week() instead');
+      return now.week();
+    }
+  } catch (error) {
+    console.error('Error in getCurrentWeekNumber:', error);
+    return 1; // Fallback week number
+  }
 }
 
 // Debug helper for timezone information

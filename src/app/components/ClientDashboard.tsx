@@ -42,8 +42,8 @@ import TimezoneDebug from './TimezoneDebug';
 import { getCurrentTimeInAppTimezone } from '../lib/timezone';
 
 const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
 );
 
 // Filter data based on date range
@@ -54,7 +54,18 @@ function filterDataByDateRange(data: any[] | null | undefined, startDate: string
   if (!startDate || !endDate) return data;
   
   // Import timezone functions here to avoid circular dependency
-  const { getDateInAppTimezone } = require('../lib/timezone');
+  let getDateInAppTimezone;
+  try {
+    const timezoneModule = require('../lib/timezone');
+    getDateInAppTimezone = timezoneModule.getDateInAppTimezone;
+  } catch (error) {
+    console.error('Error loading timezone functions:', error);
+    return data; // Return unfiltered data if timezone functions fail
+  }
+  
+  if (!getDateInAppTimezone) {
+    return data; // Return unfiltered data if timezone function is not available
+  }
   
   const start = getDateInAppTimezone(startDate);
   const end = getDateInAppTimezone(endDate);
@@ -69,7 +80,19 @@ function filterDataByDateRange(data: any[] | null | undefined, startDate: string
 function formatDateRangeForDisplay(startDate: string, endDate: string, period: string): string {
   if (!startDate || !endDate) return 'All Time';
   
-  const { getDateInAppTimezone } = require('../lib/timezone');
+  let getDateInAppTimezone;
+  try {
+    const timezoneModule = require('../lib/timezone');
+    getDateInAppTimezone = timezoneModule.getDateInAppTimezone;
+  } catch (error) {
+    console.error('Error loading timezone functions:', error);
+    return 'All Time'; // Return default if timezone functions fail
+  }
+  
+  if (!getDateInAppTimezone) {
+    return 'All Time'; // Return default if timezone function is not available
+  }
+  
   const start = getDateInAppTimezone(startDate);
   const end = getDateInAppTimezone(endDate);
   

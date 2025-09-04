@@ -45,8 +45,8 @@ import { getCurrentTimeInAppTimezone } from './lib/timezone';
 import LoginForm from './components/LoginForm';
 
 const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
 );
 
 // Filter data based on date range
