@@ -17,19 +17,29 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-export async function fetchInstagramDailyAgg(clientId: string): Promise<Row[]> {
-  console.log('fetchInstagramDailyAgg called with clientId:', clientId);
+export async function fetchInstagramDailyAgg(clientId: string, startDate?: string, endDate?: string): Promise<Row[]> {
+  console.log('fetchInstagramDailyAgg called with clientId:', clientId, 'startDate:', startDate, 'endDate:', endDate);
   
   const startTime = Date.now();
   
   try {
     console.log('fetchInstagramDailyAgg: Creating Supabase query...');
     
-    const { data, error } = await supabase
+    let query = supabase
       .from('mv_instagram_daily_totals')
       .select('*')
       .eq('client_id', parseInt(clientId, 10))
       .order('day', { ascending: true });
+
+    // Add date filtering if provided
+    if (startDate) {
+      query = query.gte('day', startDate);
+    }
+    if (endDate) {
+      query = query.lte('day', endDate);
+    }
+
+    const { data, error } = await query;
       
     if (error) {
       console.error('fetchInstagramDailyAgg error:', error);

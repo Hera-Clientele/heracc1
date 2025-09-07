@@ -95,3 +95,4 @@ For admin access, you'll need to create an admin client in the database with:
 3. **User Experience**: Clean, focused interface for individual clients
 4. **Administrative Control**: Admins retain full access
 5. **Scalability**: Easy to add new clients without affecting existing ones
+

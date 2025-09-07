@@ -30,6 +30,12 @@ export default function ClientPage() {
   useEffect(() => {
     const checkAuth = async () => {
       try {
+        // If clientId is 'admin', redirect to admin dashboard
+        if (clientId === 'admin') {
+          router.push('/admin');
+          return;
+        }
+
         // Check if there's a stored session or token
         const storedClientId = localStorage.getItem('authenticatedClientId');
         const storedClientName = localStorage.getItem('authenticatedClientName');
@@ -48,7 +54,9 @@ export default function ClientPage() {
             localStorage.removeItem('authenticatedClientName');
             setIsAuthenticated(false);
           } else {
-            setClientInfo(data);
+            // Use the stored client name from localStorage, fallback to model from database
+            const displayName = storedClientName || data.model || `Client ${storedClientId}`;
+            setClientInfo({ client_id: data.client_id, model: displayName });
             setIsAuthenticated(true);
           }
         } else {
@@ -63,7 +71,7 @@ export default function ClientPage() {
     };
 
     checkAuth();
-  }, [clientId]);
+  }, [clientId, router]);
 
   const handleLogin = (authenticatedClientId: string, clientName: string) => {
     // Store authentication info

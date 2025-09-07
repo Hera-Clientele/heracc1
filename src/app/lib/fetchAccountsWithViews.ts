@@ -8,6 +8,7 @@ export interface AccountWithViews {
   average_views: number;
   followers: number;
   platform: string;
+  client_id?: number;
   display_name?: string;
   bio?: string;
   account_niche?: string;
@@ -49,6 +50,10 @@ export async function fetchAccountsWithViews(platform?: 'tiktok' | 'instagram', 
       query = query.eq('client_id', clientId);
     }
 
+    // Only show active accounts
+    console.log('fetchAccountsWithViews: Filtering by account_status: Active');
+    query = query.eq('account_status', 'Active');
+
     console.log('fetchAccountsWithViews: Executing query...');
     const { data, error } = await query;
     
@@ -76,6 +81,7 @@ export async function fetchAccountsWithViews(platform?: 'tiktok' | 'instagram', 
         : 0, // Add this for component compatibility
       followers: account.followers_count || 0,
       platform: account.platform,
+      client_id: account.client_id,
       display_name: account.display_name,
       bio: account.bio,
       account_niche: account.account_niche,

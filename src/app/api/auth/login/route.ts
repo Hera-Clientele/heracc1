@@ -29,11 +29,19 @@ export async function POST(req: NextRequest) {
       return Response.json({ error: 'Invalid credentials' }, { status: 401 });
     }
 
+    // Map client IDs to proper names
+    const clientNames: { [key: string]: string } = {
+      '1': 'Katie',
+      '2': 'Daisy'
+    };
+    
+    const displayName = clientNames[data.client_id] || data.model || `Client ${data.client_id}`;
+
     // Return client information (without password)
     return Response.json({ 
       success: true, 
       client_id: data.client_id,
-      model: data.model 
+      model: displayName 
     });
   } catch (error: any) {
     console.error('Login error:', error);

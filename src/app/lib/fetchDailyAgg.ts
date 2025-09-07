@@ -16,14 +16,24 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-export async function fetchDailyAgg(clientId: string): Promise<Row[]> {
-  console.log('fetchDailyAgg called with clientId:', clientId);
+export async function fetchDailyAgg(clientId: string, startDate?: string, endDate?: string): Promise<Row[]> {
+  console.log('fetchDailyAgg called with clientId:', clientId, 'startDate:', startDate, 'endDate:', endDate);
   
-      const { data, error } = await supabase
-      .from('mv_tiktok_daily_totals')
-      .select('*')
-      .eq('client_id', parseInt(clientId, 10))
-      .order('day', { ascending: true });
+  let query = supabase
+    .from('mv_tiktok_daily_totals')
+    .select('*')
+    .eq('client_id', parseInt(clientId, 10))
+    .order('day', { ascending: true });
+
+  // Add date filtering if provided
+  if (startDate) {
+    query = query.gte('day', startDate);
+  }
+  if (endDate) {
+    query = query.lte('day', endDate);
+  }
+
+  const { data, error } = await query;
     
   if (error) {
     console.error('fetchDailyAgg error:', error);

@@ -563,13 +563,18 @@ export default function ClientDashboard({ clientId, clientName }: ClientDashboar
       const response = await fetch(`/api/meta-analytics/daily-agg?clientId=${clientId}`);
       if (response.ok) {
         const result = await response.json();
-        setMetaAnalyticsData(result.data || []);
+        if (result.data && Array.isArray(result.data)) {
+          setMetaAnalyticsData(result.data);
+        } else {
+          console.warn('Meta analytics data is empty or invalid for client:', clientId);
+          setMetaAnalyticsData([]);
+        }
       } else {
-        console.error('Failed to fetch meta analytics data');
+        console.warn('Failed to fetch meta analytics data for client:', clientId);
         setMetaAnalyticsData([]);
       }
     } catch (error) {
-      console.error('Error fetching meta analytics data:', error);
+      console.warn('Error fetching meta analytics data for client:', clientId, error);
       setMetaAnalyticsData([]);
     } finally {
       setMetaAnalyticsLoading(false);
@@ -617,6 +622,22 @@ export default function ClientDashboard({ clientId, clientName }: ClientDashboar
             <MaterializedViewsRefresher />
           </div>
         </header>
+        
+        {/* Client Selector - Display Only */}
+        <div className="mb-6">
+          <div className="backdrop-blur-md bg-white/5 border border-white/10 rounded-xl p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-3 h-3 rounded-full bg-green-400"></div>
+                <span className="text-white font-medium">Client:</span>
+                <span className="text-blue-400 font-semibold">{clientName || 'Unknown'}</span>
+              </div>
+              <div className="text-sm text-slate-400">
+                Active Session
+              </div>
+            </div>
+          </div>
+        </div>
         
         <PlatformSelector 
           selectedPlatform={selectedPlatform} 

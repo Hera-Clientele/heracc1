@@ -2,7 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
 export interface MetaAnalyticsMetric {
@@ -57,10 +57,11 @@ const ACCOUNT_MAPPING: Record<string, { client_id: number; platform: 'instagram'
   // Add Facebook accounts with platform: 'facebook'
 };
 
-export async function fetchMetaAnalyticsDailyAgg(clientId: string, platform?: 'instagram' | 'facebook'): Promise<DailyTotalsRow[]> {
-  console.log('fetchMetaAnalyticsDailyAgg called with clientId:', clientId, 'platform:', platform);
+export async function fetchMetaAnalyticsDailyAgg(clientId: string, platform?: 'instagram' | 'facebook', startDate?: string, endDate?: string, accountUsernames?: string[]): Promise<DailyTotalsRow[]> {
+  console.log('fetchMetaAnalyticsDailyAgg called with clientId:', clientId, 'platform:', platform, 'startDate:', startDate, 'endDate:', endDate);
   
   try {
+    // First try the materialized view
     let query = supabase
       .from('mv_meta_analytics_daily_totals')
       .select('*')
@@ -70,33 +71,109 @@ export async function fetchMetaAnalyticsDailyAgg(clientId: string, platform?: 'i
     if (platform) {
       query = query.eq('platform', platform);
     }
-    
+
+    // Add date filtering if provided
+    if (startDate) {
+      query = query.gte('date', startDate);
+    }
+    if (endDate) {
+      query = query.lte('date', endDate);
+    }
+
     const { data, error } = await query;
     
+    console.log('Materialized view query result:', { data: data?.length || 0, error: error?.message, sample: data?.[0] });
+    
     if (error) {
-      console.error('fetchMetaAnalyticsDailyAgg error:', error);
-      throw error;
+      console.warn('Materialized view not available, trying fallback:', error.message);
+      
+      // Fallback: try to get data from the raw meta_analytics table
+      let fallbackQuery = supabase
+        .from('meta_analytics')
+        .select(`
+          date,
+          platform,
+          views,
+          reach,
+          profile_visits,
+          num_posts,
+          client_id
+        `)
+        .eq('client_id', parseInt(clientId, 10))
+        .order('date', { ascending: true });
+      
+      if (platform) {
+        fallbackQuery = fallbackQuery.eq('platform', platform);
+      }
+      
+      const { data: fallbackData, error: fallbackError } = await fallbackQuery;
+      
+      if (fallbackError) {
+        console.error('Fallback query also failed:', fallbackError);
+        // Return empty array instead of throwing error
+        return [];
+      }
+      
+      // Aggregate the fallback data by date and platform
+      const aggregatedData = (fallbackData || []).reduce((acc: any, row) => {
+        const key = `${row.date}_${row.platform}`;
+        if (!acc[key]) {
+          acc[key] = {
+            day: row.date,
+            platform: row.platform,
+            total_views: 0,
+            total_reach: 0,
+            total_profile_visits: 0,
+            total_posts: 0,
+            total_accounts: 0,
+            active_accounts: 0,
+            account_usernames: '',
+          };
+        }
+        acc[key].total_views += row.views || 0;
+        acc[key].total_reach += row.reach || 0;
+        acc[key].total_profile_visits += row.profile_visits || 0;
+        acc[key].total_posts += row.num_posts || 0;
+        acc[key].total_accounts += 1;
+        acc[key].active_accounts += 1;
+        return acc;
+      }, {});
+      
+      const fallbackResult = Object.values(aggregatedData);
+      console.log('fetchMetaAnalyticsDailyAgg fallback result:', { count: fallbackResult.length, sample: fallbackResult[0] });
+      return fallbackResult as DailyTotalsRow[];
     }
     
     console.log('fetchMetaAnalyticsDailyAgg result:', { count: data?.length || 0, sample: data?.[0] });
     
     // Map the data to match the expected interface
-    const mappedData = (data || []).map(row => ({
+    let mappedData = (data || []).map(row => ({
       day: row.date,
       platform: row.platform,
       total_views: row.total_views || 0,
       total_reach: row.total_reach || 0,
       total_profile_visits: row.total_profile_visits || 0,
-      total_posts: row.total_posts || 0, // Add total_posts to mapped data
+      total_posts: row.total_posts || 0,
       total_accounts: row.total_accounts || 0,
       active_accounts: row.active_accounts || 0,
       account_usernames: row.account_usernames || '',
     }));
+
+    // Filter by specific accounts if provided
+    if (accountUsernames && accountUsernames.length > 0) {
+      mappedData = mappedData.filter(row => {
+        const rowUsernames = row.account_usernames.split(', ').map((u: string) => u.trim());
+        return accountUsernames.some(selectedUsername => 
+          rowUsernames.includes(selectedUsername)
+        );
+      });
+    }
     
     return mappedData;
   } catch (error) {
     console.error('fetchMetaAnalyticsDailyAgg function error:', error);
-    throw error;
+    // Return empty array instead of throwing error to prevent UI crashes
+    return [];
   }
 }
 
@@ -267,4 +344,19 @@ export async function syncFromGoogleSheets(sheetData: any[]): Promise<string> {
 
 export function getAccountMapping(): Record<string, { client_id: number; platform: 'instagram' | 'facebook' }> {
   return ACCOUNT_MAPPING;
+}
+
+export async function refreshMetaAnalyticsMaterializedView(): Promise<void> {
+  try {
+    console.log('Refreshing meta analytics materialized view...');
+    const { error } = await supabase.rpc('refresh_meta_analytics_daily_totals');
+    if (error) {
+      console.error('Failed to refresh materialized view:', error);
+      throw error;
+    }
+    console.log('Materialized view refreshed successfully');
+  } catch (error) {
+    console.error('Error refreshing materialized view:', error);
+    throw error;
+  }
 }
