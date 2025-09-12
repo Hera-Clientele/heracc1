@@ -145,3 +145,4 @@ export async function GET(req: NextRequest) {
     return Response.json({ error: 'Failed to fetch top performers' }, { status: 500 });
   }
 }
+

@@ -16,6 +16,8 @@ interface InstagramViewsChartProps {
   data: any[];
   startDate?: string;
   endDate?: string;
+  unfilteredData?: any[]; // Add unfiltered data for comparison
+  showComparison?: boolean; // Flag to show comparison
 }
 
 function getLastUpdateTime() {
@@ -29,7 +31,7 @@ function getNextUpdateTime() {
   return lastUpdate.add(30, 'minute');
 }
 
-export default function InstagramViewsChart({ data, startDate, endDate }: InstagramViewsChartProps) {
+export default function InstagramViewsChart({ data, startDate, endDate, unfilteredData = [], showComparison = false }: InstagramViewsChartProps) {
   // Filter data by date range if provided and ensure no future dates
   let filteredData = data;
   const currentDate = dayjs().tz('America/New_York').startOf('day');
@@ -55,6 +57,37 @@ export default function InstagramViewsChart({ data, startDate, endDate }: Instag
   // Filter for Instagram platform only
   filteredData = filteredData.filter(row => row.platform === 'instagram');
 
+  // Process unfiltered data if provided
+  let unfilteredChartData: any[] = [];
+  if (showComparison && unfilteredData.length > 0) {
+    let filteredUnfilteredData = unfilteredData;
+    if (startDate && endDate) {
+      filteredUnfilteredData = unfilteredData.filter(row => {
+        const rowDate = dayjs(row.date || row.day);
+        const start = dayjs(startDate);
+        const end = dayjs(endDate);
+        return rowDate.isAfter(start.subtract(1, 'day')) && 
+               rowDate.isBefore(end.add(1, 'day')) && 
+               rowDate.isBefore(currentDate.add(1, 'day'));
+      });
+    } else {
+      filteredUnfilteredData = unfilteredData.filter(row => {
+        const rowDate = dayjs(row.date || row.day);
+        return rowDate.isBefore(currentDate.add(1, 'day'));
+      });
+    }
+    
+    unfilteredChartData = filteredUnfilteredData
+      .filter(row => row.platform === 'instagram')
+      .map(row => ({
+        date: row.date || row.day,
+        views: Number(row.total_views),
+        reach: Number(row.total_reach),
+        accounts: Number(row.total_accounts),
+        active_accounts: Number(row.active_accounts),
+      }));
+  }
+
   // Ensure all fields are numbers
   const chartData = filteredData.map(row => ({
     date: row.date || row.day,
@@ -64,6 +97,16 @@ export default function InstagramViewsChart({ data, startDate, endDate }: Instag
     active_accounts: Number(row.active_accounts),
   }));
 
+  // Create combined chart data for comparison
+  const combinedChartData = chartData.map(filteredRow => {
+    const unfilteredRow = unfilteredChartData.find(row => row.date === filteredRow.date);
+    return {
+      ...filteredRow,
+      unfilteredViews: unfilteredRow?.views || 0,
+      unfilteredReach: unfilteredRow?.reach || 0,
+    };
+  });
+
   // Get update times
   const lastUpdate = getLastUpdateTime();
   const nextUpdate = getNextUpdateTime();
@@ -71,8 +114,11 @@ export default function InstagramViewsChart({ data, startDate, endDate }: Instag
   // Custom Tooltip for Views
   const ViewsTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
-      const views = payload.find((p: any) => p.dataKey === 'views')?.value || 0;
-      const reach = payload.find((p: any) => p.dataKey === 'reach')?.value || 0;
+      const data = payload[0].payload;
+      const views = data.views || 0;
+      const reach = data.reach || 0;
+      const unfilteredViews = data.unfilteredViews || 0;
+      const unfilteredReach = data.unfilteredReach || 0;
       
       return (
         <div className="bg-slate-900/90 p-3 rounded-lg shadow text-white border border-slate-700">
@@ -80,6 +126,15 @@ export default function InstagramViewsChart({ data, startDate, endDate }: Instag
           <div className="space-y-1">
             <div>Views: <span className="text-blue-400 font-bold">{views.toLocaleString()}</span></div>
             <div>Reach: <span className="text-green-400 font-bold">{reach.toLocaleString()}</span></div>
+            {showComparison && unfilteredViews > 0 && (
+              <>
+                <div className="border-t border-slate-600 pt-1 mt-2">
+                  <div className="text-xs text-slate-400">All Accounts:</div>
+                  <div>Views: <span className="text-blue-400 font-bold" style={{ opacity: 0.6 }}>{unfilteredViews.toLocaleString()}</span></div>
+                  <div>Reach: <span className="text-green-400 font-bold" style={{ opacity: 0.6 }}>{unfilteredReach.toLocaleString()}</span></div>
+                </div>
+              </>
+            )}
           </div>
         </div>
       );
@@ -96,11 +151,16 @@ export default function InstagramViewsChart({ data, startDate, endDate }: Instag
             Views and Reach from Meta Analytics
           </p>
         </div>
+        {showComparison && (
+          <div className="text-sm text-pink-400 bg-pink-400/10 px-3 py-1 rounded-full border border-pink-400/20">
+            Instagram accounts filtered
+          </div>
+        )}
 
       </div>
 
       <ResponsiveContainer width="100%" height={300}>
-        <LineChart data={chartData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+        <LineChart data={combinedChartData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
           <defs>
             <linearGradient id="colorViews" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor="#E4405F" stopOpacity={0.5}/>
@@ -164,21 +224,58 @@ export default function InstagramViewsChart({ data, startDate, endDate }: Instag
             activeDot={{ r: 6, stroke: "#833AB4", strokeWidth: 2 }}
           />
           
+          {/* Unfiltered Views Line (dashed) */}
+          {showComparison && (
+            <Line
+              type="linear"
+              dataKey="unfilteredViews"
+              stroke="#E4405F"
+              strokeWidth={2}
+              strokeDasharray="5 5"
+              dot={false}
+              activeDot={{ r: 4, stroke: "#E4405F", strokeWidth: 2 }}
+            />
+          )}
+          
+          {/* Unfiltered Reach Line (dashed) */}
+          {showComparison && (
+            <Line
+              type="linear"
+              dataKey="unfilteredReach"
+              stroke="#833AB4"
+              strokeWidth={2}
+              strokeDasharray="5 5"
+              dot={false}
+              activeDot={{ r: 4, stroke: "#833AB4", strokeWidth: 2 }}
+            />
+          )}
 
         </LineChart>
       </ResponsiveContainer>
 
       {/* Legend */}
-              <div className="flex justify-center mt-4 space-x-6">
-          <div className="flex items-center space-x-2">
-            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#E4405F' }}></div>
-            <span className="text-sm text-slate-300">Views</span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#833AB4' }}></div>
-            <span className="text-sm text-slate-300">Reach</span>
-          </div>
+      <div className="flex justify-center mt-4 space-x-6">
+        <div className="flex items-center space-x-2">
+          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#E4405F' }}></div>
+          <span className="text-sm text-slate-300">Views</span>
         </div>
+        <div className="flex items-center space-x-2">
+          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#833AB4' }}></div>
+          <span className="text-sm text-slate-300">Reach</span>
+        </div>
+        {showComparison && (
+          <>
+            <div className="flex items-center space-x-2">
+              <div className="w-3 h-0.5 rounded" style={{ backgroundColor: '#E4405F', borderStyle: 'dashed' }}></div>
+              <span className="text-sm text-slate-300">Views (All)</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <div className="w-3 h-0.5 rounded" style={{ backgroundColor: '#833AB4', borderStyle: 'dashed' }}></div>
+              <span className="text-sm text-slate-300">Reach (All)</span>
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 } 

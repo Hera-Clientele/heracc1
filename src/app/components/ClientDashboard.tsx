@@ -36,6 +36,7 @@ import type { AccountWithViews } from '../lib/fetchAccountsWithViews';
 import { createClient } from '@supabase/supabase-js';
 import { fetchInstagramDailyAgg } from '../lib/fetchInstagramDailyAgg';
 import { fetchFacebookDailyAgg } from '../lib/fetchFacebookDailyAgg';
+import { fetchMetaAnalyticsDailyAgg } from '../lib/metaAnalytics';
 import InstagramWeeklyStats from './InstagramWeeklyStats';
 import TikTokWeeklyStats from './TikTokWeeklyStats';
 import TimezoneDebug from './TimezoneDebug';
@@ -150,6 +151,9 @@ export default function ClientDashboard({ clientId, clientName }: ClientDashboar
   const [instagramError, setInstagramError] = useState<string | null>(null);
   const [facebookError, setFacebookError] = useState<string | null>(null);
   const [instagramUniqueAccounts, setInstagramUniqueAccounts] = useState<number>(0);
+  const [selectedInstagramAccounts, setSelectedInstagramAccounts] = useState<string[]>([]);
+  const [instagramAccountNames, setInstagramAccountNames] = useState<string[]>([]);
+  const [instagramUnfilteredData, setInstagramUnfilteredData] = useState<any[]>([]);
   
   // Materialized view refresh hook - refreshes on page load if data is stale
   const { isRefreshing, lastRefresh, refresh } = useMaterializedViewRefresh({
@@ -302,6 +306,37 @@ export default function ClientDashboard({ clientId, clientName }: ClientDashboar
       }
       setInstagramAccounts([]); // Not used for stats grid anymore
 
+      // Fetch Instagram account names for filtering from accounts table
+      try {
+        const { data, error } = await supabase
+          .from('accounts')
+          .select('username, platform')
+          .eq('client_id', parseInt(clientId))
+          .eq('platform', 'instagram')
+          .not('username', 'is', null)
+          .order('username');
+        
+        if (error) {
+          console.error('Error fetching Instagram account names from accounts table:', error);
+          setInstagramAccountNames([]);
+        } else {
+        console.log('Raw data from accounts table:', data?.slice(0, 10)); // Show first 10 rows for debugging
+        console.log('Total raw records:', data?.length);
+        
+        // Check what platforms we have
+        const platforms = [...new Set(data?.map(row => row.platform).filter(Boolean) || [])];
+        console.log('Platforms found:', platforms);
+        
+        const uniqueAccounts = [...new Set(data?.map(row => row.username).filter(Boolean) || [])];
+        setInstagramAccountNames(uniqueAccounts);
+        console.log('Instagram account names from accounts table:', uniqueAccounts);
+        console.log('Total accounts found:', uniqueAccounts.length);
+        }
+      } catch (err) {
+        console.error('Error fetching Instagram account names:', err);
+        setInstagramAccountNames([]);
+      }
+
       // Fetch Facebook daily aggregates
       let facebookAggData: any[] = [];
       try {
@@ -322,6 +357,38 @@ export default function ClientDashboard({ clientId, clientName }: ClientDashboar
       setLoading(false);
     }
   }
+
+  // Function to fetch Instagram data with account filtering
+  const fetchInstagramDataWithFiltering = async () => {
+    if (selectedPlatform !== 'instagram') return;
+    
+    try {
+      // Fetch filtered data
+      const filteredData = await fetchMetaAnalyticsDailyAgg(
+        clientId, 
+        'instagram', 
+        instagramDateRange.startDate, 
+        instagramDateRange.endDate,
+        selectedInstagramAccounts.length > 0 ? selectedInstagramAccounts : undefined
+      );
+      
+      // Fetch unfiltered data for comparison if accounts are filtered
+      let unfilteredData: any[] = [];
+      if (selectedInstagramAccounts.length > 0) {
+        unfilteredData = await fetchMetaAnalyticsDailyAgg(
+          clientId, 
+          'instagram', 
+          instagramDateRange.startDate, 
+          instagramDateRange.endDate
+        );
+      }
+      
+      setMetaAnalyticsData(filteredData);
+      setInstagramUnfilteredData(unfilteredData);
+    } catch (err) {
+      console.error('Error fetching Instagram data with filtering:', err);
+    }
+  };
 
   useEffect(() => {
     fetchAll();
@@ -608,6 +675,13 @@ export default function ClientDashboard({ clientId, clientName }: ClientDashboar
     });
   }, [metaAnalyticsData, metaAnalyticsLoading, selectedPlatform]);
 
+  // Effect to fetch Instagram data when filtering changes
+  useEffect(() => {
+    if (selectedPlatform === 'instagram') {
+      fetchInstagramDataWithFiltering();
+    }
+  }, [selectedInstagramAccounts, instagramDateRange, selectedPlatform]);
+
   return (
     <main className="min-h-screen bg-gradient-to-br from-[#18181b] to-[#23272f] flex flex-col items-center py-12 font-sans">
       <div className="w-full max-w-4xl">
@@ -643,6 +717,81 @@ export default function ClientDashboard({ clientId, clientName }: ClientDashboar
           selectedPlatform={selectedPlatform} 
           onPlatformChange={setSelectedPlatform} 
         />
+        
+        {/* Instagram Account Filter */}
+        {selectedPlatform === 'instagram' && instagramAccountNames.length > 0 && (
+          <div className="mb-6 backdrop-blur-md bg-white/5 border border-white/10 rounded-xl p-4">
+            <h3 className="text-white font-semibold mb-3">Filter Instagram Accounts</h3>
+            
+            {/* Quick filter buttons */}
+            <div className="flex flex-wrap gap-2 mb-4">
+              <button
+                onClick={() => setSelectedInstagramAccounts([])}
+                className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                  selectedInstagramAccounts.length === 0
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-white/10 text-slate-300 hover:bg-white/20'
+                }`}
+              >
+                All Accounts
+              </button>
+              <button
+                onClick={() => setSelectedInstagramAccounts(instagramAccountNames.filter(acc => 
+                  !['angelkatiele', 'baddiekatiele', 'funwithkatiee'].includes(acc)
+                ))}
+                className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                  selectedInstagramAccounts.length > 0 && 
+                  selectedInstagramAccounts.length === instagramAccountNames.length - 3 &&
+                  !selectedInstagramAccounts.some(acc => ['angelkatiele', 'baddiekatiele', 'funwithkatiee'].includes(acc))
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-white/10 text-slate-300 hover:bg-white/20'
+                }`}
+              >
+                No Meme
+              </button>
+              <button
+                onClick={() => setSelectedInstagramAccounts(instagramAccountNames.filter(acc => 
+                  ['angelkatiele', 'baddiekatiele', 'funwithkatiee'].includes(acc)
+                ))}
+                className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                  selectedInstagramAccounts.length === 3 &&
+                  selectedInstagramAccounts.every(acc => ['angelkatiele', 'baddiekatiele', 'funwithkatiee'].includes(acc))
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-white/10 text-slate-300 hover:bg-white/20'
+                }`}
+              >
+                Meme Accounts
+              </button>
+            </div>
+
+            {/* Account checkboxes in horizontal grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 max-h-48 overflow-y-auto">
+              {instagramAccountNames.map(account => (
+                <label key={account} className="flex items-center space-x-2 cursor-pointer p-2 rounded hover:bg-white/5 transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={selectedInstagramAccounts.includes(account)}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setSelectedInstagramAccounts([...selectedInstagramAccounts, account]);
+                      } else {
+                        setSelectedInstagramAccounts(selectedInstagramAccounts.filter(acc => acc !== account));
+                      }
+                    }}
+                    className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                  />
+                  <span className="text-pink-400 font-medium text-sm truncate" title={account}>{account}</span>
+                </label>
+              ))}
+            </div>
+            
+            {selectedInstagramAccounts.length > 0 && (
+              <div className="mt-3 text-xs text-slate-400">
+                {selectedInstagramAccounts.length} account{selectedInstagramAccounts.length !== 1 ? 's' : ''} selected
+              </div>
+            )}
+          </div>
+        )}
         
         {/* Platform-specific Date Range Selectors */}
         {selectedPlatform === 'instagram' && (
@@ -711,7 +860,13 @@ export default function ClientDashboard({ clientId, clientName }: ClientDashboar
               ) : selectedPlatform === 'instagram' ? (
                 !metaAnalyticsLoading && metaAnalyticsData.length > 0 ? (
                   <>
-                    <InstagramViewsChart data={metaAnalyticsData} startDate={instagramDateRange.startDate} endDate={instagramDateRange.endDate} />
+                    <InstagramViewsChart 
+                      data={metaAnalyticsData} 
+                      startDate={instagramDateRange.startDate} 
+                      endDate={instagramDateRange.endDate}
+                      unfilteredData={instagramUnfilteredData}
+                      showComparison={selectedInstagramAccounts.length > 0}
+                    />
                     <div className="mt-6">
                       <ProfileVisitsChart data={metaAnalyticsData} startDate={instagramDateRange.startDate} endDate={instagramDateRange.endDate} platform="instagram" />
                     </div>

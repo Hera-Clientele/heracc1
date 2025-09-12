@@ -127,3 +127,4 @@ export async function GET(req: NextRequest) {
     return Response.json({ error: 'Failed to fetch aggregated statistics' }, { status: 500 });
   }
 }
+

@@ -40,6 +40,7 @@ export default function AdminDashboard({ onLogout }: AdminDashboardProps) {
   // Filter states
   const [selectedClients, setSelectedClients] = useState<string[]>(['1', '2']); // Default to all clients
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>(['tiktok', 'instagram', 'facebook']); // Default to all platforms
+  const [selectedInstagramAccounts, setSelectedInstagramAccounts] = useState<string[]>([]); // Default to all Instagram accounts
   
   // Account popup modal state
   const [selectedAccount, setSelectedAccount] = useState<AccountWithViews | null>(null);
@@ -60,6 +61,8 @@ export default function AdminDashboard({ onLogout }: AdminDashboardProps) {
   const [topPosts, setTopPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [instagramAccounts, setInstagramAccounts] = useState<string[]>([]);
+  const [instagramUnfilteredData, setInstagramUnfilteredData] = useState<Row[]>([]);
 
   const { refresh: refreshMaterializedViews } = useMaterializedViewRefresh();
 
@@ -71,6 +74,53 @@ export default function AdminDashboard({ onLogout }: AdminDashboardProps) {
     console.log('AdminDashboard: Setting initial date range:', { startDate, endDate });
     setDateRange({ startDate, endDate, period: 'last_30_days' });
   }, []);
+
+  // Fetch Instagram accounts for filtering
+  useEffect(() => {
+    const fetchInstagramAccounts = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('meta_analytics')
+          .select('account_name, platform')
+          .in('client_id', selectedClients.map(id => parseInt(id)))
+          .not('account_name', 'is', null)
+          .order('account_name');
+        
+        if (error) {
+          console.error('Error fetching Instagram accounts from meta_analytics:', error);
+          return;
+        }
+        
+        console.log('Raw data from meta_analytics:', data?.slice(0, 10)); // Show first 10 rows for debugging
+        console.log('Total raw records:', data?.length);
+        
+        // Check what platforms we have
+        const platforms = [...new Set(data?.map(row => row.platform).filter(Boolean) || [])];
+        console.log('Platforms found:', platforms);
+        
+        // Filter for Instagram accounts and get unique names
+        const instagramAccounts = data?.filter(row => 
+          row.platform === 'instagram' || 
+          !row.platform || 
+          row.platform === null
+        ) || [];
+        
+        console.log('Instagram filtered data:', instagramAccounts.slice(0, 10));
+        console.log('Instagram records count:', instagramAccounts.length);
+        
+        const uniqueAccounts = [...new Set(instagramAccounts.map(row => row.account_name).filter(Boolean))];
+        setInstagramAccounts(uniqueAccounts);
+        console.log('Instagram accounts from meta_analytics:', uniqueAccounts);
+        console.log('Total accounts found:', uniqueAccounts.length);
+      } catch (err) {
+        console.error('Error fetching Instagram accounts:', err);
+      }
+    };
+
+    if (selectedClients.length > 0) {
+      fetchInstagramAccounts();
+    }
+  }, [selectedClients]);
 
   // Fetch all data when date range changes
   useEffect(() => {
@@ -96,7 +146,7 @@ export default function AdminDashboard({ onLogout }: AdminDashboardProps) {
               
               // Fetch Instagram data from selected clients
               Promise.all(selectedClients.map(clientId => 
-                fetchInstagramDailyAgg(clientId, dateRange.startDate, dateRange.endDate).catch(() => [])
+                fetchMetaAnalyticsDailyAgg(clientId, 'instagram', dateRange.startDate, dateRange.endDate, selectedInstagramAccounts.length > 0 ? selectedInstagramAccounts : undefined).catch(() => [])
               )).then(results => results.flat()),
               
               // Fetch Facebook data from selected clients using meta analytics
@@ -118,7 +168,18 @@ export default function AdminDashboard({ onLogout }: AdminDashboardProps) {
             ]);
 
         const tiktok = allTiktokData;
-        const instagram = allInstagramData;
+        
+        // Map meta analytics Instagram data to match the expected interface
+        const instagram = allInstagramData.map(row => ({
+          day: row.day,
+          posts: row.total_posts || 0,
+          accounts: 0, // This might need to be calculated differently
+          views: row.total_views || 0,
+          likes: 0, // Not available in meta analytics
+          comments: 0, // Not available in meta analytics
+          shares: 0, // Not available in meta analytics
+          engagement_rate: 0 // This will be calculated by the component
+        }));
         
         // Map meta analytics Facebook data to match the expected interface
         const facebook = allFacebookData.map(row => ({
@@ -144,6 +205,33 @@ export default function AdminDashboard({ onLogout }: AdminDashboardProps) {
         setFacebookData(facebook);
         setAccounts(accountsData);
         setTopPosts(postsData);
+
+        // Fetch unfiltered Instagram data for comparison if accounts are filtered
+        if (selectedInstagramAccounts.length > 0) {
+          try {
+            const unfilteredInstagramData = await Promise.all(selectedClients.map(clientId => 
+              fetchMetaAnalyticsDailyAgg(clientId, 'instagram', dateRange.startDate, dateRange.endDate).catch(() => [])
+            )).then(results => results.flat());
+            
+            const unfilteredInstagram = unfilteredInstagramData.map(row => ({
+              day: row.day,
+              posts: row.total_posts || 0,
+              accounts: 0,
+              views: row.total_views || 0,
+              likes: 0,
+              comments: 0,
+              shares: 0,
+              engagement_rate: 0
+            }));
+            
+            setInstagramUnfilteredData(unfilteredInstagram);
+          } catch (err) {
+            console.error('Error fetching unfiltered Instagram data:', err);
+            setInstagramUnfilteredData([]);
+          }
+        } else {
+          setInstagramUnfilteredData([]);
+        }
       } catch (err) {
         console.error('Error fetching admin data:', err);
         setError('Failed to load data. Please try again.');
@@ -153,7 +241,7 @@ export default function AdminDashboard({ onLogout }: AdminDashboardProps) {
     };
 
     fetchAllData();
-  }, [dateRange, selectedClients]);
+  }, [dateRange, selectedClients, selectedInstagramAccounts]);
 
   // Calculate aggregated statistics based on selected platforms
   const getAggregatedStats = () => {
@@ -268,7 +356,7 @@ export default function AdminDashboard({ onLogout }: AdminDashboardProps) {
         </div>
 
         {/* Filters */}
-        <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="mb-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {/* Client Filter */}
           <div className="backdrop-blur-md bg-white/5 border border-white/10 rounded-xl p-4">
             <h3 className="text-white font-semibold mb-3">Filter by Client</h3>
@@ -321,6 +409,81 @@ export default function AdminDashboard({ onLogout }: AdminDashboardProps) {
             </div>
           </div>
 
+          {/* Instagram Account Filter */}
+          {selectedPlatforms.includes('instagram') && instagramAccounts.length > 0 && (
+            <div className="backdrop-blur-md bg-white/5 border border-white/10 rounded-xl p-4">
+              <h3 className="text-white font-semibold mb-3">Filter Instagram Accounts</h3>
+              
+              {/* Quick filter buttons */}
+              <div className="flex flex-wrap gap-2 mb-4">
+                <button
+                  onClick={() => setSelectedInstagramAccounts([])}
+                  className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                    selectedInstagramAccounts.length === 0
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-white/10 text-slate-300 hover:bg-white/20'
+                  }`}
+                >
+                  All Accounts
+                </button>
+                <button
+                  onClick={() => setSelectedInstagramAccounts(instagramAccounts.filter(acc => 
+                    !['angelkatiele', 'baddiekatiele', 'funwithkatiee'].includes(acc)
+                  ))}
+                  className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                    selectedInstagramAccounts.length > 0 && 
+                    selectedInstagramAccounts.length === instagramAccounts.length - 3 &&
+                    !selectedInstagramAccounts.some(acc => ['angelkatiele', 'baddiekatiele', 'funwithkatiee'].includes(acc))
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-white/10 text-slate-300 hover:bg-white/20'
+                  }`}
+                >
+                  No Meme
+                </button>
+                <button
+                  onClick={() => setSelectedInstagramAccounts(instagramAccounts.filter(acc => 
+                    ['angelkatiele', 'baddiekatiele', 'funwithkatiee'].includes(acc)
+                  ))}
+                  className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                    selectedInstagramAccounts.length === 3 &&
+                    selectedInstagramAccounts.every(acc => ['angelkatiele', 'baddiekatiele', 'funwithkatiee'].includes(acc))
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-white/10 text-slate-300 hover:bg-white/20'
+                  }`}
+                >
+                  Meme Accounts
+                </button>
+              </div>
+
+              {/* Account checkboxes in horizontal grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 max-h-48 overflow-y-auto">
+                {instagramAccounts.map(account => (
+                  <label key={account} className="flex items-center space-x-2 cursor-pointer p-2 rounded hover:bg-white/5 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={selectedInstagramAccounts.includes(account)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedInstagramAccounts([...selectedInstagramAccounts, account]);
+                        } else {
+                          setSelectedInstagramAccounts(selectedInstagramAccounts.filter(acc => acc !== account));
+                        }
+                      }}
+                      className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                    />
+                    <span className="text-pink-400 font-medium text-sm truncate" title={account}>{account}</span>
+                  </label>
+                ))}
+              </div>
+              
+              {selectedInstagramAccounts.length > 0 && (
+                <div className="mt-3 text-xs text-slate-400">
+                  {selectedInstagramAccounts.length} account{selectedInstagramAccounts.length !== 1 ? 's' : ''} selected
+                </div>
+              )}
+            </div>
+          )}
+
         </div>
 
         {/* Active Filters Summary */}
@@ -334,6 +497,14 @@ export default function AdminDashboard({ onLogout }: AdminDashboardProps) {
             <span className="text-sm text-slate-300">
               <strong>Platforms:</strong> {selectedPlatforms.length === 3 ? 'All (TikTok, Instagram, Facebook)' : selectedPlatforms.map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(', ')}
             </span>
+            {selectedPlatforms.includes('instagram') && selectedInstagramAccounts.length > 0 && (
+              <>
+                <span className="text-slate-500">•</span>
+                <span className="text-sm text-slate-300">
+                  <strong>Instagram Accounts:</strong> {selectedInstagramAccounts.length} selected ({selectedInstagramAccounts.slice(0, 2).join(', ')}{selectedInstagramAccounts.length > 2 ? ` +${selectedInstagramAccounts.length - 2} more` : ''})
+                </span>
+              </>
+            )}
           </div>
         </div>
 
@@ -542,6 +713,8 @@ export default function AdminDashboard({ onLogout }: AdminDashboardProps) {
                 tiktokData={selectedPlatforms.includes('tiktok') ? tiktokData : []}
                 instagramData={selectedPlatforms.includes('instagram') ? instagramData : []}
                 facebookData={selectedPlatforms.includes('facebook') ? facebookData : []}
+                instagramUnfilteredData={selectedPlatforms.includes('instagram') && selectedInstagramAccounts.length > 0 ? instagramUnfilteredData : []}
+                showInstagramComparison={selectedPlatforms.includes('instagram') && selectedInstagramAccounts.length > 0}
                 startDate={dateRange.startDate}
                 endDate={dateRange.endDate}
               />

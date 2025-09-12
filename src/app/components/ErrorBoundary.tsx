@@ -64,3 +64,4 @@ function DefaultErrorFallback({ error }: { error?: Error }) {
 
 export default ErrorBoundary;
 
+

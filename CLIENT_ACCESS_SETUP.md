@@ -96,3 +96,4 @@ For admin access, you'll need to create an admin client in the database with:
 4. **Administrative Control**: Admins retain full access
 5. **Scalability**: Easy to add new clients without affecting existing ones
 
+

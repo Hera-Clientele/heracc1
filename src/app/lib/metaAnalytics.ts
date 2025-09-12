@@ -58,10 +58,84 @@ const ACCOUNT_MAPPING: Record<string, { client_id: number; platform: 'instagram'
 };
 
 export async function fetchMetaAnalyticsDailyAgg(clientId: string, platform?: 'instagram' | 'facebook', startDate?: string, endDate?: string, accountUsernames?: string[]): Promise<DailyTotalsRow[]> {
-  console.log('fetchMetaAnalyticsDailyAgg called with clientId:', clientId, 'platform:', platform, 'startDate:', startDate, 'endDate:', endDate);
+  console.log('fetchMetaAnalyticsDailyAgg called with clientId:', clientId, 'platform:', platform, 'startDate:', startDate, 'endDate:', endDate, 'accountUsernames:', accountUsernames);
   
   try {
-    // First try the materialized view
+    // If filtering by specific accounts, use raw meta_analytics table directly
+    if (accountUsernames && accountUsernames.length > 0) {
+      console.log('Using raw meta_analytics table for account filtering');
+      
+      let query = supabase
+        .from('meta_analytics')
+        .select(`
+          date,
+          platform,
+          account_name,
+          views,
+          reach,
+          profile_visits,
+          num_posts,
+          client_id
+        `)
+        .eq('client_id', parseInt(clientId, 10))
+        .in('account_name', accountUsernames)
+        .order('date', { ascending: true });
+      
+      if (platform) {
+        query = query.eq('platform', platform);
+      }
+      
+      // Add date filtering if provided
+      if (startDate) {
+        query = query.gte('date', startDate);
+      }
+      if (endDate) {
+        query = query.lte('date', endDate);
+      }
+      
+      const { data, error } = await query;
+      
+      if (error) {
+        console.error('Error fetching filtered meta analytics data:', error);
+        return [];
+      }
+      
+      // Aggregate the data by date
+      const aggregatedData = (data || []).reduce((acc: any, row) => {
+        const key = row.date;
+        if (!acc[key]) {
+          acc[key] = {
+            day: row.date,
+            platform: row.platform,
+            total_views: 0,
+            total_reach: 0,
+            total_profile_visits: 0,
+            total_posts: 0,
+            total_accounts: 0,
+            active_accounts: 0,
+            account_usernames: '',
+          };
+        }
+        acc[key].total_views += row.views || 0;
+        acc[key].total_reach += row.reach || 0;
+        acc[key].total_profile_visits += row.profile_visits || 0;
+        acc[key].total_posts += row.num_posts || 0;
+        acc[key].total_accounts += 1;
+        acc[key].active_accounts += 1;
+        if (acc[key].account_usernames) {
+          acc[key].account_usernames += ', ' + row.account_name;
+        } else {
+          acc[key].account_usernames = row.account_name;
+        }
+        return acc;
+      }, {});
+      
+      const result = Object.values(aggregatedData);
+      console.log('Filtered meta analytics result:', { count: result.length, sample: result[0] });
+      return result as DailyTotalsRow[];
+    }
+    
+    // Otherwise, use materialized view for better performance
     let query = supabase
       .from('mv_meta_analytics_daily_totals')
       .select('*')
