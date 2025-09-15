@@ -111,14 +111,34 @@ export default function InstagramViewsChart({ data, startDate, endDate, unfilter
   const lastUpdate = getLastUpdateTime();
   const nextUpdate = getNextUpdateTime();
 
+  // Calculate Y-axis domain based on filtered data when showing comparison
+  const calculateYAxisDomain = (): [number, number] | [number, 'auto'] => {
+    if (!showComparison || combinedChartData.length === 0) {
+      return [0, 'auto'];
+    }
+    
+    // Get max values from filtered data only
+    const maxViews = Math.max(...combinedChartData.map(d => d.views || 0));
+    const maxReach = Math.max(...combinedChartData.map(d => d.reach || 0));
+    const maxValue = Math.max(maxViews, maxReach);
+    
+    // Add 10% padding to the top
+    const paddedMax = Math.ceil(maxValue * 1.1);
+    
+    // Ensure minimum range for visibility
+    const minRange = Math.max(10000, paddedMax);
+    
+    return [0, minRange];
+  };
+
+  const yAxisDomain = calculateYAxisDomain();
+
   // Custom Tooltip for Views
   const ViewsTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
       const views = data.views || 0;
       const reach = data.reach || 0;
-      const unfilteredViews = data.unfilteredViews || 0;
-      const unfilteredReach = data.unfilteredReach || 0;
       
       return (
         <div className="bg-slate-900/90 p-3 rounded-lg shadow text-white border border-slate-700">
@@ -126,15 +146,6 @@ export default function InstagramViewsChart({ data, startDate, endDate, unfilter
           <div className="space-y-1">
             <div>Views: <span className="text-blue-400 font-bold">{views.toLocaleString()}</span></div>
             <div>Reach: <span className="text-green-400 font-bold">{reach.toLocaleString()}</span></div>
-            {showComparison && unfilteredViews > 0 && (
-              <>
-                <div className="border-t border-slate-600 pt-1 mt-2">
-                  <div className="text-xs text-slate-400">All Accounts:</div>
-                  <div>Views: <span className="text-blue-400 font-bold" style={{ opacity: 0.6 }}>{unfilteredViews.toLocaleString()}</span></div>
-                  <div>Reach: <span className="text-green-400 font-bold" style={{ opacity: 0.6 }}>{unfilteredReach.toLocaleString()}</span></div>
-                </div>
-              </>
-            )}
           </div>
         </div>
       );
@@ -182,7 +193,7 @@ export default function InstagramViewsChart({ data, startDate, endDate, unfilter
           <YAxis 
             tick={{ fontSize: 12, fill: '#9CA3AF' }} 
             allowDecimals={false} 
-            domain={[0, 'auto']} 
+            domain={yAxisDomain} 
             tickFormatter={tick => {
               if (tick === 0) return '';
               if (tick >= 1000000) return `${(tick / 1000000).toFixed(1)}M`;
@@ -224,31 +235,6 @@ export default function InstagramViewsChart({ data, startDate, endDate, unfilter
             activeDot={{ r: 6, stroke: "#833AB4", strokeWidth: 2 }}
           />
           
-          {/* Unfiltered Views Line (dashed) */}
-          {showComparison && (
-            <Line
-              type="linear"
-              dataKey="unfilteredViews"
-              stroke="#E4405F"
-              strokeWidth={2}
-              strokeDasharray="5 5"
-              dot={false}
-              activeDot={{ r: 4, stroke: "#E4405F", strokeWidth: 2 }}
-            />
-          )}
-          
-          {/* Unfiltered Reach Line (dashed) */}
-          {showComparison && (
-            <Line
-              type="linear"
-              dataKey="unfilteredReach"
-              stroke="#833AB4"
-              strokeWidth={2}
-              strokeDasharray="5 5"
-              dot={false}
-              activeDot={{ r: 4, stroke: "#833AB4", strokeWidth: 2 }}
-            />
-          )}
 
         </LineChart>
       </ResponsiveContainer>
@@ -263,18 +249,6 @@ export default function InstagramViewsChart({ data, startDate, endDate, unfilter
           <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#833AB4' }}></div>
           <span className="text-sm text-slate-300">Reach</span>
         </div>
-        {showComparison && (
-          <>
-            <div className="flex items-center space-x-2">
-              <div className="w-3 h-0.5 rounded" style={{ backgroundColor: '#E4405F', borderStyle: 'dashed' }}></div>
-              <span className="text-sm text-slate-300">Views (All)</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <div className="w-3 h-0.5 rounded" style={{ backgroundColor: '#833AB4', borderStyle: 'dashed' }}></div>
-              <span className="text-sm text-slate-300">Reach (All)</span>
-            </div>
-          </>
-        )}
       </div>
     </div>
   );

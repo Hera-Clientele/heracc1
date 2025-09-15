@@ -63,11 +63,10 @@ export default function AllPlatformsDailyViewsChart({
   const filteredTiktok = filterData(tiktokData);
   const filteredInstagram = filterData(instagramData);
   const filteredFacebook = filterData(facebookData);
-  const filteredInstagramUnfiltered = filterData(instagramUnfilteredData);
 
   // Create a map of all unique dates
   const allDates = new Set<string>();
-  [...filteredTiktok, ...filteredInstagram, ...filteredFacebook, ...filteredInstagramUnfiltered].forEach(row => {
+  [...filteredTiktok, ...filteredInstagram, ...filteredFacebook].forEach(row => {
     allDates.add(row.day);
   });
 
@@ -78,19 +77,40 @@ export default function AllPlatformsDailyViewsChart({
       const tiktokRow = filteredTiktok.find(row => row.day === date);
       const instagramRow = filteredInstagram.find(row => row.day === date);
       const facebookRow = filteredFacebook.find(row => row.day === date);
-      const instagramUnfilteredRow = filteredInstagramUnfiltered.find(row => row.day === date);
 
       return {
         date,
         tiktokViews: Number(tiktokRow?.views || 0),
         instagramViews: Number(instagramRow?.views || 0),
-        instagramUnfilteredViews: Number(instagramUnfilteredRow?.views || 0),
         facebookViews: Number(facebookRow?.video_views || 0),
         totalViews: (Number(tiktokRow?.views || 0) + 
                     Number(instagramRow?.views || 0) + 
                     Number(facebookRow?.video_views || 0))
       };
     });
+
+  // Calculate Y-axis domain based on filtered data when showing Instagram comparison
+  const calculateYAxisDomain = (): [number, number] | [number, 'auto'] => {
+    if (!showInstagramComparison || dailyViewsData.length === 0) {
+      return [0, 'auto'];
+    }
+    
+    // Get max values from all platforms (excluding unfiltered Instagram for scaling)
+    const maxTiktok = Math.max(...dailyViewsData.map(d => d.tiktokViews || 0));
+    const maxInstagram = Math.max(...dailyViewsData.map(d => d.instagramViews || 0));
+    const maxFacebook = Math.max(...dailyViewsData.map(d => d.facebookViews || 0));
+    const maxValue = Math.max(maxTiktok, maxInstagram, maxFacebook);
+    
+    // Add 15% padding to the top
+    const paddedMax = Math.ceil(maxValue * 1.15);
+    
+    // Ensure minimum range for visibility
+    const minRange = Math.max(50000, paddedMax);
+    
+    return [0, minRange];
+  };
+
+  const yAxisDomain = calculateYAxisDomain();
 
   // Custom Tooltip
   const CustomTooltip = ({ active, payload, label }: any) => {
@@ -108,12 +128,6 @@ export default function AllPlatformsDailyViewsChart({
               <span style={{ color: CHART_COLORS.instagram.primary }}>Instagram:</span>
               <span className="font-bold">{formatChartNumber(data.instagramViews)}</span>
             </div>
-            {showInstagramComparison && data.instagramUnfilteredViews > 0 && (
-              <div className="flex justify-between">
-                <span style={{ color: CHART_COLORS.instagram.primary, opacity: 0.6 }}>Instagram (All):</span>
-                <span className="font-bold" style={{ opacity: 0.6 }}>{formatChartNumber(data.instagramUnfilteredViews)}</span>
-              </div>
-            )}
             <div className="flex justify-between">
               <span style={{ color: CHART_COLORS.facebook.primary }}>Facebook:</span>
               <span className="font-bold">{formatChartNumber(data.facebookViews)}</span>
@@ -167,7 +181,7 @@ export default function AllPlatformsDailyViewsChart({
           <YAxis 
             tick={{ fontSize: 12 }} 
             allowDecimals={false} 
-            domain={[0, 'auto']} 
+            domain={yAxisDomain} 
             tickFormatter={tick => {
               if (tick === 0) return '';
               return formatChartNumber(tick);
@@ -209,19 +223,6 @@ export default function AllPlatformsDailyViewsChart({
             name="Instagram"
           />
           
-          {/* Instagram unfiltered line (dashed) */}
-          {showInstagramComparison && (
-            <Line
-              type="monotone"
-              dataKey="instagramUnfilteredViews"
-              stroke="#e4405f"
-              strokeWidth={2}
-              strokeDasharray="5 5"
-              dot={false}
-              activeDot={{ r: 4 }}
-              name="Instagram (All)"
-            />
-          )}
           
           {/* Facebook line */}
           <Area
