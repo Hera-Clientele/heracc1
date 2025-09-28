@@ -105,6 +105,11 @@ export default function MetaAnalyticsChart({
       views: '#1877F2',
       reach: '#42A5F5',
       profile_visits: '#1976D2'
+    },
+    youtube: {
+      views: '#FF0000',
+      reach: '#FF4444',
+      profile_visits: '#FF6666'
     }
   };
 

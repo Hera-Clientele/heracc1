@@ -79,6 +79,10 @@ const MetaAnalyticsTotalViewsChart: React.FC<MetaAnalyticsTotalViewsChartProps> 
     facebook: {
       views: '#1877F2', // Facebook blue
       reach: '#42A5F5', // Facebook light blue
+    },
+    youtube: {
+      views: '#FF0000', // YouTube red
+      reach: '#FF4444', // YouTube light red
     }
   };
 

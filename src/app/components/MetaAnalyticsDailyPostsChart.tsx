@@ -103,6 +103,9 @@ const MetaAnalyticsDailyPostsChart: React.FC<MetaAnalyticsDailyPostsChartProps> 
     },
     facebook: {
       posts: '#1877F2', // Facebook blue
+    },
+    youtube: {
+      posts: '#FF0000', // YouTube red
     }
   };
 
@@ -113,7 +116,7 @@ const MetaAnalyticsDailyPostsChart: React.FC<MetaAnalyticsDailyPostsChartProps> 
       <div className="flex justify-between items-start mb-6">
         <div>
           <h2 className="text-2xl font-bold text-white mb-2">
-            {platform === 'instagram' ? 'Instagram' : 'Facebook'} Daily Posts
+            {platform === 'instagram' ? 'Instagram' : platform === 'facebook' ? 'Facebook' : 'YouTube'} Daily Posts
           </h2>
           <p className="text-slate-400">
             Daily Posts from Meta Analytics

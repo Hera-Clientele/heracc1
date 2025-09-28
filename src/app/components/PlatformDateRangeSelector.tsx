@@ -46,6 +46,7 @@ export default function PlatformDateRangeSelector({
     tiktok: 'from-black to-gray-800',
     instagram: 'from-pink-800 to-purple-700',
     facebook: 'from-blue-800 to-blue-700',
+    youtube: 'from-red-800 to-red-700',
     all_platforms: 'from-gray-700 to-slate-600'
   };
 
@@ -53,6 +54,7 @@ export default function PlatformDateRangeSelector({
     tiktok: '🎵',
     instagram: '📸',
     facebook: '📘',
+    youtube: '📺',
     all_platforms: '🌐'
   };
 

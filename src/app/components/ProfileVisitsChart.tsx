@@ -145,19 +145,19 @@ const ProfileVisitsChart: React.FC<ProfileVisitsChartProps> = ({ data, startDate
               <Line
                 type="monotone"
                 dataKey="net_subs"
-                stroke={colors.net_subs}
+                stroke={(colors as any).net_subs}
                 strokeWidth={3}
-                dot={{ fill: colors.net_subs, strokeWidth: 2, r: 5 }}
-                activeDot={{ r: 7, stroke: colors.net_subs, strokeWidth: 2 }}
+                dot={{ fill: (colors as any).net_subs, strokeWidth: 2, r: 5 }}
+                activeDot={{ r: 7, stroke: (colors as any).net_subs, strokeWidth: 2 }}
               />
             ) : (
               <Line
                 type="monotone"
                 dataKey="profile_visits"
-                stroke={colors.profile_visits}
+                stroke={(colors as any).profile_visits}
                 strokeWidth={2}
-                dot={{ fill: colors.profile_visits, strokeWidth: 2, r: 4 }}
-                activeDot={{ r: 6, stroke: colors.profile_visits, strokeWidth: 2 }}
+                dot={{ fill: (colors as any).profile_visits, strokeWidth: 2, r: 4 }}
+                activeDot={{ r: 6, stroke: (colors as any).profile_visits, strokeWidth: 2 }}
               />
             )}
           </LineChart>
@@ -170,7 +170,7 @@ const ProfileVisitsChart: React.FC<ProfileVisitsChartProps> = ({ data, startDate
             <div className="flex items-center gap-2">
               <div 
                 className="w-3 h-3 rounded-full" 
-                style={{ backgroundColor: colors.net_subs }}
+                style={{ backgroundColor: (colors as any).net_subs }}
               />
               <span className="text-slate-300 text-sm">Net Subscriber Growth</span>
             </div>
@@ -178,7 +178,7 @@ const ProfileVisitsChart: React.FC<ProfileVisitsChartProps> = ({ data, startDate
             <div className="flex items-center gap-2">
               <div 
                 className="w-3 h-3 rounded-full" 
-                style={{ backgroundColor: colors.profile_visits }}
+                style={{ backgroundColor: (colors as any).profile_visits }}
               />
               <span className="text-slate-300 text-sm">
                 {platform === 'instagram' ? 'Profile Visits' : 'Page Visits'}

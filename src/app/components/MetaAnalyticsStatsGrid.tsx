@@ -72,6 +72,11 @@ export default function MetaAnalyticsStatsGrid({ data, platform, uniqueAccounts,
       primary: '#1877F2',
       secondary: '#42A5F5',
       accent: '#1976D2'
+    },
+    youtube: {
+      primary: '#FF0000',
+      secondary: '#FF4444',
+      accent: '#FF6666'
     }
   };
 

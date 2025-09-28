@@ -207,7 +207,7 @@ export async function fetchMetaAnalyticsDailyAgg(clientId: string, platform?: 'i
       const { data, error } = await query;
       
       if (!error && data && data.length > 0) {
-        console.log('Materialized view query result:', { data: data?.length || 0, error: error?.message, sample: data?.[0] });
+        console.log('Materialized view query result:', { data: data?.length || 0, sample: data?.[0] });
         
         // Debug the actual query being executed
         console.log('Materialized view query details:', {
@@ -399,7 +399,7 @@ export async function fetchAccountDailyMetrics(clientId: string, platform?: 'ins
   }
 }
 
-export async function getAccountId(username: string, platform: 'instagram' | 'facebook', clientId: number): Promise<string | null> {
+export async function getAccountId(username: string, platform: 'instagram' | 'facebook' | 'tiktok' | 'youtube', clientId: number): Promise<string | null> {
   try {
     const { data, error } = await supabase
       .from('accounts')
@@ -421,7 +421,7 @@ export async function getAccountId(username: string, platform: 'instagram' | 'fa
   }
 }
 
-export async function createAccountIfNotExists(username: string, platform: 'instagram' | 'facebook', clientId: number): Promise<string> {
+export async function createAccountIfNotExists(username: string, platform: 'instagram' | 'facebook' | 'tiktok' | 'youtube', clientId: number): Promise<string> {
   try {
     // First try to get existing account
     const existingId = await getAccountId(username, platform, clientId);
