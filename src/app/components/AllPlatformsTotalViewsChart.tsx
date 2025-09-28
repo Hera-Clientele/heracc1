@@ -24,12 +24,14 @@ interface PlatformData {
   tiktok: any[];
   instagram: any[];
   facebook: any[];
+  youtube: any[];
 }
 
 interface AllPlatformsTotalViewsChartProps {
   tiktokData: any[];
   instagramData: any[];
   facebookData: any[];
+  youtubeData: any[];
   startDate?: string;
   endDate?: string;
 }
@@ -38,6 +40,7 @@ export default function AllPlatformsTotalViewsChart({
   tiktokData, 
   instagramData, 
   facebookData, 
+  youtubeData,
   startDate, 
   endDate 
 }: AllPlatformsTotalViewsChartProps) {
@@ -66,10 +69,11 @@ export default function AllPlatformsTotalViewsChart({
   const filteredTiktok = filterData(tiktokData);
   const filteredInstagram = filterData(instagramData);
   const filteredFacebook = filterData(facebookData);
+  const filteredYoutube = filterData(youtubeData);
 
   // Create a map of all unique dates
   const allDates = new Set<string>();
-  [...filteredTiktok, ...filteredInstagram, ...filteredFacebook].forEach(row => {
+  [...filteredTiktok, ...filteredInstagram, ...filteredFacebook, ...filteredYoutube].forEach(row => {
     allDates.add(row.day);
   });
 
@@ -80,15 +84,18 @@ export default function AllPlatformsTotalViewsChart({
       const tiktokRow = filteredTiktok.find(row => row.day === date);
       const instagramRow = filteredInstagram.find(row => row.day === date);
       const facebookRow = filteredFacebook.find(row => row.day === date);
+      const youtubeRow = filteredYoutube.find(row => row.day === date);
 
       return {
         date,
         tiktokViews: Number(tiktokRow?.views || 0),
         instagramViews: Number(instagramRow?.views || 0),
         facebookViews: Number(facebookRow?.video_views || 0),
+        youtubeViews: Number(youtubeRow?.views || 0),
         totalViews: (Number(tiktokRow?.views || 0) + 
                     Number(instagramRow?.views || 0) + 
-                    Number(facebookRow?.video_views || 0))
+                    Number(facebookRow?.video_views || 0) +
+                    Number(youtubeRow?.views || 0))
       };
     });
 
@@ -97,13 +104,15 @@ export default function AllPlatformsTotalViewsChart({
     const prevTiktok = idx > 0 ? acc[idx - 1].tiktokCumulative : 0;
     const prevInstagram = idx > 0 ? acc[idx - 1].instagramCumulative : 0;
     const prevFacebook = idx > 0 ? acc[idx - 1].facebookCumulative : 0;
+    const prevYoutube = idx > 0 ? acc[idx - 1].youtubeCumulative : 0;
     
     acc.push({
       ...curr,
       tiktokCumulative: prevTiktok + curr.tiktokViews,
       instagramCumulative: prevInstagram + curr.instagramViews,
       facebookCumulative: prevFacebook + curr.facebookViews,
-      totalCumulative: prevTiktok + prevInstagram + prevFacebook + curr.totalViews
+      youtubeCumulative: prevYoutube + curr.youtubeViews,
+      totalCumulative: prevTiktok + prevInstagram + prevFacebook + prevYoutube + curr.totalViews
     });
     return acc;
   }, []);
@@ -127,6 +136,10 @@ export default function AllPlatformsTotalViewsChart({
             <div className="flex justify-between">
               <span style={{ color: CHART_COLORS.facebook.primary }}>Facebook:</span>
               <span className="font-bold">{formatChartNumber(data.facebookCumulative)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span style={{ color: CHART_COLORS.youtube.primary }}>YouTube:</span>
+              <span className="font-bold">{formatChartNumber(data.youtubeCumulative)}</span>
             </div>
             <div className="border-t border-slate-600 pt-1 mt-2">
               <div className="flex justify-between font-semibold">
@@ -158,6 +171,10 @@ export default function AllPlatformsTotalViewsChart({
             <linearGradient id="colorFacebook" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor={CHART_COLORS.facebook.primary} stopOpacity={0.8}/>
               <stop offset="100%" stopColor={CHART_COLORS.facebook.primary} stopOpacity={0.3}/>
+            </linearGradient>
+            <linearGradient id="colorYoutube" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={CHART_COLORS.youtube.primary} stopOpacity={0.8}/>
+              <stop offset="100%" stopColor={CHART_COLORS.youtube.primary} stopOpacity={0.3}/>
             </linearGradient>
           </defs>
           <CartesianGrid strokeDasharray="3 3" />
@@ -202,6 +219,14 @@ export default function AllPlatformsTotalViewsChart({
             stroke="none"
             fill="url(#colorFacebook)"
             name="Facebook"
+          />
+          <Area
+            type="monotone"
+            dataKey="youtubeCumulative"
+            stackId="1"
+            stroke="none"
+            fill="url(#colorYoutube)"
+            name="YouTube"
           />
           
           {/* Total line on top */}

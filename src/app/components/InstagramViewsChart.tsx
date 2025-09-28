@@ -16,6 +16,7 @@ interface InstagramViewsChartProps {
   data: any[];
   startDate?: string;
   endDate?: string;
+  platform?: 'instagram' | 'facebook' | 'youtube';
   unfilteredData?: any[]; // Add unfiltered data for comparison
   showComparison?: boolean; // Flag to show comparison
 }
@@ -31,7 +32,7 @@ function getNextUpdateTime() {
   return lastUpdate.add(30, 'minute');
 }
 
-export default function InstagramViewsChart({ data, startDate, endDate, unfilteredData = [], showComparison = false }: InstagramViewsChartProps) {
+export default function InstagramViewsChart({ data, startDate, endDate, platform = 'instagram', unfilteredData = [], showComparison = false }: InstagramViewsChartProps) {
   // Filter data by date range if provided and ensure no future dates
   let filteredData = data;
   const currentDate = dayjs().tz('America/New_York').startOf('day');

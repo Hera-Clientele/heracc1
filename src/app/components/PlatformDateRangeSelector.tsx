@@ -25,7 +25,7 @@ const PERIODS = [
 ];
 
 interface PlatformDateRangeSelectorProps {
-  platform: 'tiktok' | 'instagram' | 'facebook' | 'all_platforms';
+  platform: 'tiktok' | 'instagram' | 'facebook' | 'youtube' | 'all_platforms';
   onDateRangeChange: (dateRange: DateRange) => void;
   currentRange: DateRange;
   earliestDataDate?: string;

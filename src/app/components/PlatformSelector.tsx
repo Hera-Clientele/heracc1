@@ -1,7 +1,7 @@
 "use client";
 import React from 'react';
 
-export type Platform = 'tiktok' | 'instagram' | 'facebook' | 'all_platforms' | 'scheduled';
+export type Platform = 'tiktok' | 'instagram' | 'facebook' | 'youtube' | 'all_platforms' | 'scheduled';
 
 interface PlatformSelectorProps {
   selectedPlatform: Platform;
@@ -45,6 +45,17 @@ export default function PlatformSelector({ selectedPlatform, onPlatformChange }:
           >
             <img src="/tiktok-1.svg" alt="TikTok" className="h-6 w-6" />
             <span className="font-medium">TikTok</span>
+          </button>
+          <button
+            onClick={() => onPlatformChange('youtube')}
+            className={`flex items-center space-x-2 px-4 py-2 rounded-xl transition-all duration-300 ${
+              selectedPlatform === 'youtube'
+                ? 'bg-white/20 text-white shadow-lg'
+                : 'text-slate-400 hover:text-white hover:bg-white/10'
+            }`}
+          >
+            <img src="/youtube.svg" alt="YouTube" className="h-6 w-6" />
+            <span className="font-medium">YouTube</span>
           </button>
           <button
             onClick={() => onPlatformChange('all_platforms')}

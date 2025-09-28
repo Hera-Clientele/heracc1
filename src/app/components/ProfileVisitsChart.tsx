@@ -8,7 +8,7 @@ interface ProfileVisitsChartProps {
   data: any[];
   startDate: string;
   endDate: string;
-  platform: 'instagram' | 'facebook'; // Add platform prop
+  platform: 'instagram' | 'facebook' | 'youtube'; // Add platform prop
 }
 
 interface ViewsTooltipProps {
@@ -45,6 +45,12 @@ const ProfileVisitsChart: React.FC<ProfileVisitsChartProps> = ({ data, startDate
     endDate,
     platform
   });
+  
+  // Special debugging for YouTube
+  if (platform === 'youtube') {
+    console.log('YouTube ProfileVisitsChart - Raw data sample:', data.slice(0, 3));
+    console.log('YouTube ProfileVisitsChart - Looking for subs_gained, subs_lost, net_subs fields');
+  }
 
   // Filter data by date range and platform
   const filteredData = data.filter(row => {
@@ -66,11 +72,20 @@ const ProfileVisitsChart: React.FC<ProfileVisitsChartProps> = ({ data, startDate
   // Sort by date
   const sortedData = dataToUse.sort((a, b) => new Date(a.date || a.day).getTime() - new Date(a.date || a.day).getTime());
 
-  // Transform data for the chart
-  const chartData = sortedData.map(row => ({
-    date: row.date || row.day,
-    profile_visits: row.total_profile_visits || 0,
-  }));
+  // Transform data for the chart based on platform
+  const chartData = sortedData.map(row => {
+    if (platform === 'youtube') {
+      return {
+        date: row.date || row.day,
+        net_subs: row.net_subs || 0,
+      };
+    } else {
+      return {
+        date: row.date || row.day,
+        profile_visits: row.total_profile_visits || 0,
+      };
+    }
+  });
 
   // Platform-specific colors
   const platformColors = {
@@ -79,20 +94,33 @@ const ProfileVisitsChart: React.FC<ProfileVisitsChartProps> = ({ data, startDate
     },
     facebook: {
       profile_visits: '#1976D2', // Facebook blue
+    },
+    youtube: {
+      subs_gained: '#00FF00', // Green for gained
+      subs_lost: '#FF0000', // Red for lost
+      net_subs: '#FF6B35', // Orange for net
     }
   };
 
   const colors = platformColors[platform];
+
+  // Debug the final chart data for YouTube
+  if (platform === 'youtube') {
+    console.log('YouTube ProfileVisitsChart - Final chart data:', chartData.slice(0, 3));
+    console.log('YouTube ProfileVisitsChart - Chart data length:', chartData.length);
+  }
 
   return (
     <div className="bg-slate-800 rounded-lg p-6 shadow-lg">
       <div className="flex justify-between items-start mb-6">
         <div>
           <h2 className="text-2xl font-bold text-white mb-2">
-            {platform === 'instagram' ? 'Instagram Profile Visits' : 'Facebook Page Visits'}
+            {platform === 'instagram' ? 'Instagram Profile Visits' : 
+             platform === 'facebook' ? 'Facebook Page Visits' : 
+             'YouTube Subscriber Growth'}
           </h2>
           <p className="text-slate-400">
-            Daily Profile Visits from Meta Analytics
+            {platform === 'youtube' ? 'Daily Net Subscriber Growth (Gained - Lost)' : 'Daily Profile Visits from Meta Analytics'}
           </p>
         </div>
       </div>
@@ -113,29 +141,50 @@ const ProfileVisitsChart: React.FC<ProfileVisitsChartProps> = ({ data, startDate
               tick={{ fontSize: 12 }}
             />
             <Tooltip content={<ViewsTooltip />} />
-            <Line
-              type="monotone"
-              dataKey="profile_visits"
-              stroke={colors.profile_visits}
-              strokeWidth={2}
-              dot={{ fill: colors.profile_visits, strokeWidth: 2, r: 4 }}
-              activeDot={{ r: 6, stroke: colors.profile_visits, strokeWidth: 2 }}
-            />
+            {platform === 'youtube' ? (
+              <Line
+                type="monotone"
+                dataKey="net_subs"
+                stroke={colors.net_subs}
+                strokeWidth={3}
+                dot={{ fill: colors.net_subs, strokeWidth: 2, r: 5 }}
+                activeDot={{ r: 7, stroke: colors.net_subs, strokeWidth: 2 }}
+              />
+            ) : (
+              <Line
+                type="monotone"
+                dataKey="profile_visits"
+                stroke={colors.profile_visits}
+                strokeWidth={2}
+                dot={{ fill: colors.profile_visits, strokeWidth: 2, r: 4 }}
+                activeDot={{ r: 6, stroke: colors.profile_visits, strokeWidth: 2 }}
+              />
+            )}
           </LineChart>
         </ResponsiveContainer>
       </div>
 
       <div className="mt-4 flex justify-center">
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <div 
-              className="w-3 h-3 rounded-full" 
-              style={{ backgroundColor: colors.profile_visits }}
-            />
-            <span className="text-slate-300 text-sm">
-              {platform === 'instagram' ? 'Profile Visits' : 'Page Visits'}
-            </span>
-          </div>
+          {platform === 'youtube' ? (
+            <div className="flex items-center gap-2">
+              <div 
+                className="w-3 h-3 rounded-full" 
+                style={{ backgroundColor: colors.net_subs }}
+              />
+              <span className="text-slate-300 text-sm">Net Subscriber Growth</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <div 
+                className="w-3 h-3 rounded-full" 
+                style={{ backgroundColor: colors.profile_visits }}
+              />
+              <span className="text-slate-300 text-sm">
+                {platform === 'instagram' ? 'Profile Visits' : 'Page Visits'}
+              </span>
+            </div>
+          )}
         </div>
       </div>
     </div>

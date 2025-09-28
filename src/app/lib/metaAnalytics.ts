@@ -7,7 +7,7 @@ const supabase = createClient(
 
 export interface MetaAnalyticsMetric {
   date: string;
-  platform: 'instagram' | 'facebook';
+  platform: 'instagram' | 'facebook' | 'tiktok';
   account_id?: string; // Changed to string for UUID
   account_name: string;
   views: number;
@@ -27,6 +27,15 @@ export interface DailyTotalsRow {
   total_accounts: number;
   active_accounts: number;
   account_usernames?: string; // New field from joined accounts
+  // TikTok-specific fields
+  total_tt_profile_views?: number;
+  total_likes?: number;
+  total_shares?: number;
+  total_comments?: number;
+  total_tt_followers?: number;
+  // YouTube-specific fields
+  total_yt_subs_gained?: number;
+  total_yt_subs_lost?: number;
 }
 
 export interface AccountDailyMetric {
@@ -57,8 +66,9 @@ const ACCOUNT_MAPPING: Record<string, { client_id: number; platform: 'instagram'
   // Add Facebook accounts with platform: 'facebook'
 };
 
-export async function fetchMetaAnalyticsDailyAgg(clientId: string, platform?: 'instagram' | 'facebook', startDate?: string, endDate?: string, accountUsernames?: string[]): Promise<DailyTotalsRow[]> {
+export async function fetchMetaAnalyticsDailyAgg(clientId: string, platform?: 'instagram' | 'facebook' | 'tiktok' | 'youtube', startDate?: string, endDate?: string, accountUsernames?: string[]): Promise<DailyTotalsRow[]> {
   console.log('fetchMetaAnalyticsDailyAgg called with clientId:', clientId, 'platform:', platform, 'startDate:', startDate, 'endDate:', endDate, 'accountUsernames:', accountUsernames);
+  
   
   try {
     // If filtering by specific accounts, use raw meta_analytics table directly
@@ -75,7 +85,14 @@ export async function fetchMetaAnalyticsDailyAgg(clientId: string, platform?: 'i
           reach,
           profile_visits,
           num_posts,
-          client_id
+          client_id,
+          tt_profile_views,
+          likes,
+          shares,
+          comments,
+          tt_followers,
+          yt_subs_gained,
+          yt_subs_lost
         `)
         .eq('client_id', parseInt(clientId, 10))
         .in('account_name', accountUsernames)
@@ -114,6 +131,15 @@ export async function fetchMetaAnalyticsDailyAgg(clientId: string, platform?: 'i
             total_accounts: 0,
             active_accounts: 0,
             account_usernames: '',
+            // TikTok-specific fields
+            total_tt_profile_views: 0,
+            total_likes: 0,
+            total_shares: 0,
+            total_comments: 0,
+            total_tt_followers: 0,
+            // YouTube-specific fields
+            total_yt_subs_gained: 0,
+            total_yt_subs_lost: 0,
           };
         }
         acc[key].total_views += row.views || 0;
@@ -122,6 +148,25 @@ export async function fetchMetaAnalyticsDailyAgg(clientId: string, platform?: 'i
         acc[key].total_posts += row.num_posts || 0;
         acc[key].total_accounts += 1;
         acc[key].active_accounts += 1;
+        
+        // TikTok-specific aggregations
+        if (row.platform === 'tiktok') {
+          acc[key].total_tt_profile_views += row.tt_profile_views || 0;
+          acc[key].total_likes += row.likes || 0;
+          acc[key].total_shares += row.shares || 0;
+          acc[key].total_comments += row.comments || 0;
+          acc[key].total_tt_followers += row.tt_followers || 0;
+        }
+        
+        // YouTube-specific aggregations
+        if (row.platform === 'youtube') {
+          acc[key].total_yt_subs_gained += row.yt_subs_gained || 0;
+          acc[key].total_yt_subs_lost += row.yt_subs_lost || 0;
+          acc[key].total_likes += row.likes || 0;
+          acc[key].total_shares += row.shares || 0;
+          acc[key].total_comments += row.comments || 0;
+        }
+        
         if (acc[key].account_usernames) {
           acc[key].account_usernames += ', ' + row.account_name;
         } else {
@@ -135,115 +180,192 @@ export async function fetchMetaAnalyticsDailyAgg(clientId: string, platform?: 'i
       return result as DailyTotalsRow[];
     }
     
-    // Otherwise, use materialized view for better performance
-    let query = supabase
-      .from('mv_meta_analytics_daily_totals')
-      .select('*')
-      .eq('client_id', parseInt(clientId, 10))
-      .order('date', { ascending: true });
-    
-    if (platform) {
-      query = query.eq('platform', platform);
-    }
-
-    // Add date filtering if provided
-    if (startDate) {
-      query = query.gte('date', startDate);
-    }
-    if (endDate) {
-      query = query.lte('date', endDate);
-    }
-
-    const { data, error } = await query;
-    
-    console.log('Materialized view query result:', { data: data?.length || 0, error: error?.message, sample: data?.[0] });
-    
-    if (error) {
-      console.warn('Materialized view not available, trying fallback:', error.message);
-      
-      // Fallback: try to get data from the raw meta_analytics table
-      let fallbackQuery = supabase
-        .from('meta_analytics')
-        .select(`
-          date,
-          platform,
-          views,
-          reach,
-          profile_visits,
-          num_posts,
-          client_id
-        `)
+    // For YouTube, skip materialized view and go directly to fallback
+    if (platform === 'youtube') {
+      console.log('Skipping materialized view for YouTube, using fallback query directly');
+      // Skip to fallback logic below
+    } else {
+      // Try materialized view first for other platforms
+      let query = supabase
+        .from('mv_meta_analytics_daily_totals')
+        .select('*')
         .eq('client_id', parseInt(clientId, 10))
         .order('date', { ascending: true });
       
       if (platform) {
-        fallbackQuery = fallbackQuery.eq('platform', platform);
+        query = query.eq('platform', platform);
       }
-      
-      const { data: fallbackData, error: fallbackError } = await fallbackQuery;
-      
-      if (fallbackError) {
-        console.error('Fallback query also failed:', fallbackError);
-        // Return empty array instead of throwing error
-        return [];
+
+      // Add date filtering if provided
+      if (startDate) {
+        query = query.gte('date', startDate);
       }
+      if (endDate) {
+        query = query.lte('date', endDate);
+      }
+
+      const { data, error } = await query;
       
-      // Aggregate the fallback data by date and platform
-      const aggregatedData = (fallbackData || []).reduce((acc: any, row) => {
-        const key = `${row.date}_${row.platform}`;
-        if (!acc[key]) {
-          acc[key] = {
-            day: row.date,
-            platform: row.platform,
-            total_views: 0,
-            total_reach: 0,
-            total_profile_visits: 0,
-            total_posts: 0,
-            total_accounts: 0,
-            active_accounts: 0,
-            account_usernames: '',
-          };
-        }
-        acc[key].total_views += row.views || 0;
-        acc[key].total_reach += row.reach || 0;
-        acc[key].total_profile_visits += row.profile_visits || 0;
-        acc[key].total_posts += row.num_posts || 0;
-        acc[key].total_accounts += 1;
-        acc[key].active_accounts += 1;
-        return acc;
-      }, {});
-      
-      const fallbackResult = Object.values(aggregatedData);
-      console.log('fetchMetaAnalyticsDailyAgg fallback result:', { count: fallbackResult.length, sample: fallbackResult[0] });
-      return fallbackResult as DailyTotalsRow[];
+      if (!error && data && data.length > 0) {
+        console.log('Materialized view query result:', { data: data?.length || 0, error: error?.message, sample: data?.[0] });
+        
+        // Debug the actual query being executed
+        console.log('Materialized view query details:', {
+          clientId: clientId,
+          platform: platform,
+          startDate: startDate,
+          endDate: endDate,
+          queryParams: {
+            client_id: parseInt(clientId, 10),
+            platform: platform,
+            date_gte: startDate,
+            date_lte: endDate
+          }
+        });
+        
+        // Return the data directly from materialized view
+        const result = data.map(row => ({
+          day: row.date,
+          platform: row.platform,
+          total_views: row.total_views || 0,
+          total_reach: row.total_reach || 0,
+          total_profile_visits: row.total_profile_visits || 0,
+          total_posts: row.total_posts || 0,
+          total_accounts: row.total_accounts || 0,
+          active_accounts: row.active_accounts || 0,
+          account_usernames: row.account_usernames || '',
+          // TikTok-specific fields
+          total_tt_profile_views: row.total_tt_profile_views || 0,
+          total_likes: row.total_likes || 0,
+          total_shares: row.total_shares || 0,
+          total_comments: row.total_comments || 0,
+          total_tt_followers: row.total_tt_followers || 0,
+          // YouTube-specific fields
+          total_yt_subs_gained: row.total_yt_subs_gained || 0,
+          total_yt_subs_lost: row.total_yt_subs_lost || 0,
+        }));
+        
+        console.log('Materialized view result:', { count: result.length, sample: result[0] });
+        return result as DailyTotalsRow[];
+      }
     }
     
-    console.log('fetchMetaAnalyticsDailyAgg result:', { count: data?.length || 0, sample: data?.[0] });
+    // Fallback: try to get data from the raw meta_analytics table
+    console.log('Using fallback query for meta_analytics with clientId:', clientId, 'platform:', platform);
+    let fallbackQuery = supabase
+      .from('meta_analytics')
+      .select(`
+        date,
+        platform,
+        views,
+        reach,
+        profile_visits,
+        num_posts,
+        client_id,
+        tt_profile_views,
+        likes,
+        shares,
+        comments,
+        tt_followers,
+        yt_subs_gained,
+        yt_subs_lost
+      `)
+      .eq('client_id', parseInt(clientId, 10))
+      .order('date', { ascending: true });
     
-    // Map the data to match the expected interface
-    let mappedData = (data || []).map(row => ({
-      day: row.date,
-      platform: row.platform,
-      total_views: row.total_views || 0,
-      total_reach: row.total_reach || 0,
-      total_profile_visits: row.total_profile_visits || 0,
-      total_posts: row.total_posts || 0,
-      total_accounts: row.total_accounts || 0,
-      active_accounts: row.active_accounts || 0,
-      account_usernames: row.account_usernames || '',
-    }));
-
-    // Filter by specific accounts if provided
-    if (accountUsernames && accountUsernames.length > 0) {
-      mappedData = mappedData.filter(row => {
-        const rowUsernames = row.account_usernames.split(', ').map((u: string) => u.trim());
-        return accountUsernames.some(selectedUsername => 
-          rowUsernames.includes(selectedUsername)
-        );
+    if (platform) {
+      fallbackQuery = fallbackQuery.eq('platform', platform);
+    }
+    
+    const { data: fallbackData, error: fallbackError } = await fallbackQuery;
+    
+    console.log('Fallback query result:', {
+      error: fallbackError,
+      count: fallbackData?.length || 0,
+      sample: fallbackData?.[0],
+      platform: platform,
+      clientId: clientId
+    });
+    
+    // Special debugging for YouTube fallback
+    if (platform === 'youtube') {
+      console.log('YouTube fallback data:', {
+        count: fallbackData?.length || 0,
+        sample: fallbackData?.[0],
+        hasYtSubsGained: fallbackData?.[0]?.yt_subs_gained !== undefined,
+        hasYtSubsLost: fallbackData?.[0]?.yt_subs_lost !== undefined,
+        ytSubsGainedValue: fallbackData?.[0]?.yt_subs_gained,
+        ytSubsLostValue: fallbackData?.[0]?.yt_subs_lost
       });
     }
     
-    return mappedData;
+    if (fallbackError) {
+      console.error('Fallback query also failed:', fallbackError);
+      // Return empty array instead of throwing error
+      return [];
+    }
+    
+    // Aggregate the fallback data by date and platform
+    const aggregatedData = (fallbackData || []).reduce((acc: any, row) => {
+      const key = `${row.date}_${row.platform}`;
+      if (!acc[key]) {
+        acc[key] = {
+          day: row.date,
+          platform: row.platform,
+          total_views: 0,
+          total_reach: 0,
+          total_profile_visits: 0,
+          total_posts: 0,
+          total_accounts: 0,
+          active_accounts: 0,
+          account_usernames: '',
+          // TikTok-specific fields
+          total_tt_profile_views: 0,
+          total_likes: 0,
+          total_shares: 0,
+          total_comments: 0,
+          total_tt_followers: 0,
+          // YouTube-specific fields
+          total_yt_subs_gained: 0,
+          total_yt_subs_lost: 0,
+        };
+      }
+      
+      acc[key].total_views += row.views || 0;
+      acc[key].total_reach += row.reach || 0;
+      acc[key].total_profile_visits += row.profile_visits || 0;
+      acc[key].total_posts += row.num_posts || 0;
+      
+      if (row.platform === 'tiktok') {
+        acc[key].total_tt_profile_views += row.tt_profile_views || 0;
+        acc[key].total_likes += row.likes || 0;
+        acc[key].total_shares += row.shares || 0;
+        acc[key].total_comments += row.comments || 0;
+        acc[key].total_tt_followers += row.tt_followers || 0;
+      }
+      
+      if (row.platform === 'youtube') {
+        acc[key].total_yt_subs_gained += row.yt_subs_gained || 0;
+        acc[key].total_yt_subs_lost += row.yt_subs_lost || 0;
+        acc[key].total_likes += row.likes || 0;
+        acc[key].total_shares += row.shares || 0;
+        acc[key].total_comments += row.comments || 0;
+      }
+      
+      // For active accounts, we need to count distinct account_ids
+      // This aggregation is more complex and might be better handled by the materialized view
+      // For now, we'll just sum up the accounts if available, or rely on the MV for accuracy
+      acc[key].total_accounts = (acc[key].total_accounts || 0) + 1; // Simple count, not distinct
+      if (row.views > 0 || row.tt_profile_views > 0) {
+        acc[key].active_accounts = (acc[key].active_accounts || 0) + 1; // Simple count, not distinct
+      }
+      
+      return acc;
+    }, {});
+    
+    const result = Object.values(aggregatedData);
+    console.log('Filtered meta analytics result:', { count: result.length, sample: result[0] });
+    return result as DailyTotalsRow[];
   } catch (error) {
     console.error('fetchMetaAnalyticsDailyAgg function error:', error);
     // Return empty array instead of throwing error to prevent UI crashes

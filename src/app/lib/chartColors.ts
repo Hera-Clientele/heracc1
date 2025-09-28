@@ -31,6 +31,15 @@ export const CHART_COLORS = {
       end: '#1877f2'
     }
   },
+  youtube: {
+    primary: '#ff0000',      // Red
+    light: '#ff0000',
+    dark: '#cc0000',
+    gradient: {
+      start: '#ff0000',
+      end: '#ff0000'
+    }
+  },
   // Special colors
   total: '#ffffff',           // White for total lines
   grid: '#374151',            // Dark gray for grid lines
@@ -40,7 +49,7 @@ export const CHART_COLORS = {
 /**
  * Get platform color by platform name
  */
-export function getPlatformColor(platform: 'tiktok' | 'instagram' | 'facebook') {
+export function getPlatformColor(platform: 'tiktok' | 'instagram' | 'facebook' | 'youtube') {
   return CHART_COLORS[platform];
 }
 
@@ -51,9 +60,12 @@ export function getAllPlatformColors() {
   return [
     CHART_COLORS.tiktok.primary,
     CHART_COLORS.instagram.primary,
-    CHART_COLORS.facebook.primary
+    CHART_COLORS.facebook.primary,
+    CHART_COLORS.youtube.primary
   ];
 }
+
+
 
 
 

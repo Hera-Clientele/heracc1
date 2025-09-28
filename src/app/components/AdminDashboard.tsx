@@ -39,7 +39,7 @@ export default function AdminDashboard({ onLogout }: AdminDashboardProps) {
   
   // Filter states
   const [selectedClients, setSelectedClients] = useState<string[]>(['1', '2']); // Default to all clients
-  const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>(['tiktok', 'instagram', 'facebook']); // Default to all platforms
+  const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>(['tiktok', 'instagram', 'facebook', 'youtube']); // Default to all platforms
   const [selectedInstagramAccounts, setSelectedInstagramAccounts] = useState<string[]>([]); // Default to all Instagram accounts
   
   // Account popup modal state
@@ -57,6 +57,7 @@ export default function AdminDashboard({ onLogout }: AdminDashboardProps) {
   const [tiktokData, setTiktokData] = useState<Row[]>([]);
   const [instagramData, setInstagramData] = useState<Row[]>([]);
   const [facebookData, setFacebookData] = useState<FacebookRow[]>([]);
+  const [youtubeData, setYoutubeData] = useState<Row[]>([]);
   const [accounts, setAccounts] = useState<AccountWithViews[]>([]);
   const [topPosts, setTopPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -138,10 +139,13 @@ export default function AdminDashboard({ onLogout }: AdminDashboardProps) {
         // Fetch data from selected clients and aggregate
         console.log('AdminDashboard: Fetching data for clients:', selectedClients.map(id => `${clientNames[id]} (${id})`));
         
-            const [allTiktokData, allInstagramData, allFacebookData, accountsData, postsData] = await Promise.all([
-              // Fetch TikTok data from selected clients
+            const [allTiktokData, allInstagramData, allFacebookData, allYoutubeData, accountsData, postsData] = await Promise.all([
+              // Fetch TikTok data from selected clients using meta analytics
               Promise.all(selectedClients.map(clientId => 
-                fetchDailyAgg(clientId, dateRange.startDate, dateRange.endDate).catch(() => [])
+                fetchMetaAnalyticsDailyAgg(clientId, 'tiktok', dateRange.startDate, dateRange.endDate).catch((err) => {
+                  console.error(`Failed to fetch TikTok meta analytics for client ${clientId}:`, err);
+                  return [];
+                })
               )).then(results => results.flat()),
               
               // Fetch Instagram data from selected clients
@@ -157,9 +161,22 @@ export default function AdminDashboard({ onLogout }: AdminDashboardProps) {
                 })
               )).then(results => results.flat()),
               
-              // Fetch accounts for all selected clients
+              // Fetch YouTube data from selected clients using meta analytics
               Promise.all(selectedClients.map(clientId => 
-                fetchAccountsWithViews(undefined, clientId).catch(() => [])
+                fetchMetaAnalyticsDailyAgg(clientId, 'youtube', dateRange.startDate, dateRange.endDate).catch((err) => {
+                  console.error(`Failed to fetch YouTube meta analytics for client ${clientId}:`, err);
+                  return [];
+                })
+              )).then(results => results.flat()),
+              
+              // Fetch accounts for all selected clients (including all platforms)
+              Promise.all(selectedClients.map(clientId => 
+                Promise.all([
+                  fetchAccountsWithViews('tiktok', clientId).catch(() => []),
+                  fetchAccountsWithViews('instagram', clientId).catch(() => []),
+                  fetchAccountsWithViews('facebook', clientId).catch(() => []),
+                  fetchAccountsWithViews('youtube', clientId).catch(() => [])
+                ]).then(results => results.flat())
               )).then(results => results.flat()),
               fetchTopPosts('7days').catch(err => {
                 console.warn('Failed to fetch top posts:', err);
@@ -167,7 +184,17 @@ export default function AdminDashboard({ onLogout }: AdminDashboardProps) {
               })
             ]);
 
-        const tiktok = allTiktokData;
+        // Map meta analytics TikTok data to match the expected interface
+        const tiktok = allTiktokData.map(row => ({
+          day: row.day,
+          posts: row.total_posts || 0,
+          accounts: row.total_accounts || 0,
+          views: row.total_views || 0,
+          likes: row.total_likes || 0,
+          comments: row.total_comments || 0,
+          shares: row.total_shares || 0,
+          engagement_rate: 0 // This will be calculated by the component
+        }));
         
         // Map meta analytics Instagram data to match the expected interface
         const instagram = allInstagramData.map(row => ({
@@ -188,10 +215,26 @@ export default function AdminDashboard({ onLogout }: AdminDashboardProps) {
           post_engagements: row.total_reach || 0, // Using reach as engagement proxy
         }));
 
+        // Map meta analytics YouTube data to match the expected interface
+        const youtube = allYoutubeData.map(row => ({
+          day: row.day,
+          posts: row.total_posts || 0,
+          accounts: row.total_accounts || 0,
+          views: row.total_views || 0,
+          likes: row.total_likes || 0,
+          comments: row.total_comments || 0,
+          shares: row.total_shares || 0,
+          subs_gained: row.total_yt_subs_gained || 0,
+          subs_lost: row.total_yt_subs_lost || 0,
+          net_subs: (row.total_yt_subs_gained || 0) - (row.total_yt_subs_lost || 0),
+          engagement_rate: 0 // This will be calculated by the component
+        }));
+
         console.log('AdminDashboard: Data fetched successfully:', {
           tiktok: tiktok.length,
           instagram: instagram.length,
           facebook: facebook.length,
+          youtube: youtube.length,
           accounts: accountsData.length,
           posts: postsData.length
         });
@@ -199,10 +242,12 @@ export default function AdminDashboard({ onLogout }: AdminDashboardProps) {
         console.log('AdminDashboard: Sample Instagram data:', instagram.slice(0, 2));
         console.log('AdminDashboard: Raw Facebook meta analytics data:', allFacebookData.slice(0, 2));
         console.log('AdminDashboard: Mapped Facebook data:', facebook.slice(0, 2));
+        console.log('AdminDashboard: Sample YouTube data:', youtube.slice(0, 2));
 
         setTiktokData(tiktok);
         setInstagramData(instagram);
         setFacebookData(facebook);
+        setYoutubeData(youtube);
         setAccounts(accountsData);
         setTopPosts(postsData);
 
@@ -248,18 +293,21 @@ export default function AdminDashboard({ onLogout }: AdminDashboardProps) {
     const totalTiktokViews = selectedPlatforms.includes('tiktok') ? tiktokData.reduce((sum, row) => sum + (Number(row.views) || 0), 0) : 0;
     const totalInstagramViews = selectedPlatforms.includes('instagram') ? instagramData.reduce((sum, row) => sum + (Number(row.views) || 0), 0) : 0;
     const totalFacebookViews = selectedPlatforms.includes('facebook') ? facebookData.reduce((sum, row) => sum + (Number(row.video_views) || 0), 0) : 0;
+    const totalYoutubeViews = selectedPlatforms.includes('youtube') ? youtubeData.reduce((sum, row) => sum + (Number(row.views) || 0), 0) : 0;
     
     const totalTiktokPosts = selectedPlatforms.includes('tiktok') ? tiktokData.reduce((sum, row) => sum + (Number(row.posts) || 0), 0) : 0;
     const totalInstagramPosts = selectedPlatforms.includes('instagram') ? instagramData.reduce((sum, row) => sum + (Number(row.posts) || 0), 0) : 0;
+    const totalYoutubePosts = selectedPlatforms.includes('youtube') ? youtubeData.reduce((sum, row) => sum + (Number(row.posts) || 0), 0) : 0;
     
-    const totalViews = totalTiktokViews + totalInstagramViews + totalFacebookViews;
-    const totalPosts = totalTiktokPosts + totalInstagramPosts;
+    const totalViews = totalTiktokViews + totalInstagramViews + totalFacebookViews + totalYoutubeViews;
+    const totalPosts = totalTiktokPosts + totalInstagramPosts + totalYoutubePosts;
     
     const filteredAccounts = accounts.filter(acc => selectedPlatforms.includes(acc.platform));
     const totalAccounts = filteredAccounts.length;
     const tiktokAccounts = selectedPlatforms.includes('tiktok') ? accounts.filter(acc => acc.platform === 'tiktok').length : 0;
     const instagramAccounts = selectedPlatforms.includes('instagram') ? accounts.filter(acc => acc.platform === 'instagram').length : 0;
     const facebookAccounts = selectedPlatforms.includes('facebook') ? accounts.filter(acc => acc.platform === 'facebook').length : 0;
+    const youtubeAccounts = selectedPlatforms.includes('youtube') ? accounts.filter(acc => acc.platform === 'youtube').length : 0;
 
     return {
       totalViews,
@@ -269,7 +317,8 @@ export default function AdminDashboard({ onLogout }: AdminDashboardProps) {
       platformStats: {
         tiktok: { views: totalTiktokViews, posts: totalTiktokPosts, accounts: tiktokAccounts },
         instagram: { views: totalInstagramViews, posts: totalInstagramPosts, accounts: instagramAccounts },
-        facebook: { views: totalFacebookViews, posts: 0, accounts: facebookAccounts }
+        facebook: { views: totalFacebookViews, posts: 0, accounts: facebookAccounts },
+        youtube: { views: totalYoutubeViews, posts: totalYoutubePosts, accounts: youtubeAccounts }
       }
     };
   };
@@ -290,9 +339,9 @@ export default function AdminDashboard({ onLogout }: AdminDashboardProps) {
     return num.toString();
   };
 
-  // Handle account click for Instagram accounts
+  // Handle account click for Instagram, Facebook, and TikTok accounts
   const handleAccountClick = async (account: AccountWithViews) => {
-    if (account.platform === 'instagram' || account.platform === 'facebook') {
+    if (account.platform === 'instagram' || account.platform === 'facebook' || account.platform === 'tiktok') {
       setSelectedAccount(account);
       setIsModalOpen(true);
       setLoadingAccountData(true);
@@ -311,7 +360,7 @@ export default function AdminDashboard({ onLogout }: AdminDashboardProps) {
         // Fetch individual account daily data from meta analytics (last 7 days)
         const { data, error } = await supabase
           .from('meta_analytics')
-          .select('date, views, reach, profile_visits, num_posts')
+          .select('date, views, reach, profile_visits, num_posts, tt_profile_views, likes, shares, comments, tt_followers')
           .eq('account_name', account.username)
           .eq('platform', account.platform)
           .eq('client_id', account.client_id)
@@ -386,11 +435,12 @@ export default function AdminDashboard({ onLogout }: AdminDashboardProps) {
             <h3 className="text-white font-semibold mb-3">Filter by Platform</h3>
             <div className="space-y-2">
               {[
-                { id: 'tiktok', name: 'TikTok', color: 'text-green-400' },
-                { id: 'instagram', name: 'Instagram', color: 'text-pink-400' },
-                { id: 'facebook', name: 'Facebook', color: 'text-blue-400' }
+                { id: 'tiktok', name: 'TikTok', color: 'text-green-400', icon: '/tiktok-1.svg' },
+                { id: 'instagram', name: 'Instagram', color: 'text-pink-400', icon: '/ig.svg' },
+                { id: 'facebook', name: 'Facebook', color: 'text-blue-400', icon: '/facebook.svg' },
+                { id: 'youtube', name: 'YouTube', color: 'text-red-400', icon: '/youtube.svg' }
               ].map(platform => (
-                <label key={platform.id} className="flex items-center space-x-2 cursor-pointer">
+                <label key={platform.id} className="flex items-center space-x-3 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={selectedPlatforms.includes(platform.id)}
@@ -402,6 +452,11 @@ export default function AdminDashboard({ onLogout }: AdminDashboardProps) {
                       }
                     }}
                     className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                  />
+                  <img 
+                    src={platform.icon} 
+                    alt={platform.name} 
+                    className="w-5 h-5"
                   />
                   <span className={`${platform.color} font-medium`}>{platform.name}</span>
                 </label>
@@ -495,7 +550,7 @@ export default function AdminDashboard({ onLogout }: AdminDashboardProps) {
             </span>
             <span className="text-slate-500">•</span>
             <span className="text-sm text-slate-300">
-              <strong>Platforms:</strong> {selectedPlatforms.length === 3 ? 'All (TikTok, Instagram, Facebook)' : selectedPlatforms.map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(', ')}
+              <strong>Platforms:</strong> {selectedPlatforms.length === 4 ? 'All (TikTok, Instagram, Facebook, YouTube)' : selectedPlatforms.map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(', ')}
             </span>
             {selectedPlatforms.includes('instagram') && selectedInstagramAccounts.length > 0 && (
               <>
@@ -619,7 +674,7 @@ export default function AdminDashboard({ onLogout }: AdminDashboardProps) {
                               <div 
                                 key={index} 
                                 className={`flex items-center justify-between bg-white/5 rounded-lg p-3 ${
-                                  (account.platform === 'instagram' || account.platform === 'facebook') ? 'cursor-pointer hover:bg-white/10 transition-colors' : ''
+                                  (account.platform === 'instagram' || account.platform === 'facebook' || account.platform === 'tiktok') ? 'cursor-pointer hover:bg-white/10 transition-colors' : ''
                                 }`}
                                 onClick={() => handleAccountClick(account)}
                               >
@@ -699,12 +754,13 @@ export default function AdminDashboard({ onLogout }: AdminDashboardProps) {
 
         {/* Combined Platform Charts */}
         <div className="space-y-8">
-          {tiktokData.length > 0 || instagramData.length > 0 || facebookData.length > 0 ? (
+          {tiktokData.length > 0 || instagramData.length > 0 || facebookData.length > 0 || youtubeData.length > 0 ? (
             <>
               <AllPlatformsTotalViewsChart
                 tiktokData={selectedPlatforms.includes('tiktok') ? tiktokData : []}
                 instagramData={selectedPlatforms.includes('instagram') ? instagramData : []}
                 facebookData={selectedPlatforms.includes('facebook') ? facebookData : []}
+                youtubeData={selectedPlatforms.includes('youtube') ? youtubeData : []}
                 startDate={dateRange.startDate}
                 endDate={dateRange.endDate}
               />
@@ -713,6 +769,7 @@ export default function AdminDashboard({ onLogout }: AdminDashboardProps) {
                 tiktokData={selectedPlatforms.includes('tiktok') ? tiktokData : []}
                 instagramData={selectedPlatforms.includes('instagram') ? instagramData : []}
                 facebookData={selectedPlatforms.includes('facebook') ? facebookData : []}
+                youtubeData={selectedPlatforms.includes('youtube') ? youtubeData : []}
                 instagramUnfilteredData={selectedPlatforms.includes('instagram') && selectedInstagramAccounts.length > 0 ? instagramUnfilteredData : []}
                 showInstagramComparison={selectedPlatforms.includes('instagram') && selectedInstagramAccounts.length > 0}
                 startDate={dateRange.startDate}
@@ -723,6 +780,7 @@ export default function AdminDashboard({ onLogout }: AdminDashboardProps) {
                 tiktokData={selectedPlatforms.includes('tiktok') ? tiktokData : []}
                 instagramData={selectedPlatforms.includes('instagram') ? instagramData : []}
                 facebookData={selectedPlatforms.includes('facebook') ? facebookData : []}
+                youtubeData={selectedPlatforms.includes('youtube') ? youtubeData : []}
                 startDate={dateRange.startDate}
                 endDate={dateRange.endDate}
               />

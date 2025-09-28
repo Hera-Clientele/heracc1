@@ -15,6 +15,7 @@ import InstagramViewsChart from './InstagramViewsChart';
 import InstagramTopPostsCard from './InstagramTopPostsCard';
 import FacebookTotalViewsChart from './FacebookTotalViewsChart';
 import ProfileVisitsChart from './ProfileVisitsChart';
+import YouTubeSubscriberChart from './YouTubeSubscriberChart';
 import MetaAnalyticsTotalViewsChart from './MetaAnalyticsTotalViewsChart';
 import MetaAnalyticsDailyPostsChart from './MetaAnalyticsDailyPostsChart';
 import FacebookViewsChart from './FacebookViewsChart';
@@ -37,6 +38,7 @@ import { createClient } from '@supabase/supabase-js';
 import { fetchInstagramDailyAgg } from '../lib/fetchInstagramDailyAgg';
 import { fetchFacebookDailyAgg } from '../lib/fetchFacebookDailyAgg';
 import { fetchMetaAnalyticsDailyAgg } from '../lib/metaAnalytics';
+import { fetchAccountsWithViews } from '../lib/fetchAccountsWithViews';
 import InstagramWeeklyStats from './InstagramWeeklyStats';
 import TikTokWeeklyStats from './TikTokWeeklyStats';
 import TimezoneDebug from './TimezoneDebug';
@@ -146,10 +148,14 @@ export default function ClientDashboard({ clientId, clientName }: ClientDashboar
   const [instagramData, setInstagramData] = useState<any[]>([]);
   const [instagramAccounts, setInstagramAccounts] = useState<any[]>([]);
   const [facebookData, setFacebookData] = useState<any[]>([]);
+  const [youtubeData, setYoutubeData] = useState<Row[]>([]);
+  const [youtubeRawData, setYoutubeRawData] = useState<any[]>([]);
+  const [youtubeAccounts, setYoutubeAccounts] = useState<AccountWithViews[]>([]);
   const [loading, setLoading] = useState(true);
   const [tiktokError, setTiktokError] = useState<string | null>(null);
   const [instagramError, setInstagramError] = useState<string | null>(null);
   const [facebookError, setFacebookError] = useState<string | null>(null);
+  const [youtubeError, setYoutubeError] = useState<string | null>(null);
   const [instagramUniqueAccounts, setInstagramUniqueAccounts] = useState<number>(0);
   const [selectedInstagramAccounts, setSelectedInstagramAccounts] = useState<string[]>([]);
   const [instagramAccountNames, setInstagramAccountNames] = useState<string[]>([]);
@@ -263,19 +269,76 @@ export default function ClientDashboard({ clientId, clientName }: ClientDashboar
       // Refresh all materialized views in the background
       refreshAllMaterializedViews();
       
-      // Fetch TikTok data using the new unified accounts API
-      const [tiktokAggRes, tiktokAccRes] = await Promise.all([
-        fetch(`/api/daily-agg?clientId=${clientId}`, { cache: 'no-store' }),
-        fetch(`/api/accounts?platform=tiktok&clientId=${clientId}`, { cache: 'no-store' })
+      // Fetch TikTok data using meta analytics
+      const [tiktokAggData, tiktokAccData] = await Promise.all([
+        fetchMetaAnalyticsDailyAgg(clientId, 'tiktok', dateRange.startDate, dateRange.endDate).catch(() => []),
+        fetchAccountsWithViews('tiktok', clientId).catch(() => [])
       ]);
       
-      if (!tiktokAggRes.ok || !tiktokAccRes.ok) throw new Error('Failed to fetch TikTok dashboard data');
+      // Map meta analytics TikTok data to match the expected interface
+      const mappedTiktokData = tiktokAggData.map(row => ({
+        day: row.day,
+        posts: row.total_posts || 0,
+        accounts: row.total_accounts || 0,
+        views: row.total_views || 0,
+        likes: row.total_likes || 0,
+        comments: row.total_comments || 0,
+        shares: row.total_shares || 0,
+        engagement_rate: 0 // This will be calculated by the component
+      }));
       
-      const tiktokAggData = await tiktokAggRes.json();
-      const tiktokAccData = await tiktokAccRes.json();
+      setTiktokData(mappedTiktokData);
+      setTiktokAccounts(tiktokAccData);
       
-      setTiktokData(tiktokAggData.data);
-      setTiktokAccounts(tiktokAccData.accounts);
+      // Fetch YouTube data using meta analytics
+      console.log('ClientDashboard: Fetching YouTube data for clientId:', clientId, 'dateRange:', dateRange);
+      const [youtubeAggData, youtubeAccData] = await Promise.all([
+        fetchMetaAnalyticsDailyAgg(clientId, 'youtube', dateRange.startDate, dateRange.endDate).catch((err) => {
+          console.error('ClientDashboard: Failed to fetch YouTube meta analytics:', err);
+          return [];
+        }),
+        fetchAccountsWithViews('youtube', clientId).catch((err) => {
+          console.error('ClientDashboard: Failed to fetch YouTube accounts:', err);
+          return [];
+        })
+      ]);
+      
+      console.log('ClientDashboard: YouTube data fetched:', {
+        aggData: youtubeAggData.length,
+        accData: youtubeAccData.length,
+        sampleAgg: youtubeAggData[0],
+        sampleAcc: youtubeAccData[0]
+      });
+      
+      // Map meta analytics YouTube data to match the expected interface
+      const mappedYoutubeData = youtubeAggData.map(row => ({
+        day: row.day,
+        posts: row.total_posts || 0,
+        accounts: row.total_accounts || 0,
+        views: row.total_views || 0,
+        likes: row.total_likes || 0,
+        comments: row.total_comments || 0,
+        shares: row.total_shares || 0,
+        subs_gained: row.total_yt_subs_gained || 0,
+        subs_lost: row.total_yt_subs_lost || 0,
+        net_subs: (row.total_yt_subs_gained || 0) - (row.total_yt_subs_lost || 0),
+        engagement_rate: 0 // This will be calculated by the component
+      }));
+      
+      setYoutubeData(mappedYoutubeData);
+      setYoutubeRawData(youtubeAggData); // Store raw materialized view data
+      setYoutubeAccounts(youtubeAccData);
+      
+      // Debug the raw YouTube data
+      console.log('ClientDashboard: YouTube raw data stored:', {
+        count: youtubeAggData.length,
+        sample: youtubeAggData[0],
+        hasTotalYtSubsGained: youtubeAggData[0]?.total_yt_subs_gained !== undefined,
+        hasTotalYtSubsLost: youtubeAggData[0]?.total_yt_subs_lost !== undefined,
+        totalYtSubsGainedValue: youtubeAggData[0]?.total_yt_subs_gained,
+        totalYtSubsLostValue: youtubeAggData[0]?.total_yt_subs_lost,
+        allFields: Object.keys(youtubeAggData[0] || {})
+      });
       
       // Fetch Instagram daily aggregates
       let instagramAggData: any[] = [];
@@ -519,17 +582,19 @@ export default function ClientDashboard({ clientId, clientName }: ClientDashboar
     return Array.from(aggregatedMap.values()).sort((a, b) => new Date(a.day).getTime() - new Date(b.day).getTime());
   };
 
-  const currentData = selectedPlatform === 'tiktok' ? tiktokData : selectedPlatform === 'instagram' ? instagramData : selectedPlatform === 'facebook' ? facebookData : getAggregatedData();
+  const currentData = selectedPlatform === 'tiktok' ? tiktokData : selectedPlatform === 'instagram' ? instagramData : selectedPlatform === 'facebook' ? facebookData : selectedPlatform === 'youtube' ? youtubeData : getAggregatedData();
   // Ensure currentData is always an array - with additional safety for loading state
   const safeCurrentData = loading ? [] : (Array.isArray(currentData) ? currentData : []);
-  const currentAccounts = selectedPlatform === 'tiktok' ? tiktokAccounts : selectedPlatform === 'instagram' ? instagramAccounts : [];
-  const currentError = selectedPlatform === 'tiktok' ? tiktokError : selectedPlatform === 'instagram' ? instagramError : selectedPlatform === 'facebook' ? facebookError : null;
-  const platformName = selectedPlatform === 'tiktok' ? 'TikTok' : selectedPlatform === 'instagram' ? 'Instagram' : selectedPlatform === 'facebook' ? 'Facebook' : selectedPlatform === 'all_platforms' ? 'All Platforms' : 'Scheduled Posts';
-  const platformLogo = selectedPlatform === 'tiktok' ? '/tiktok-1.svg' : selectedPlatform === 'instagram' ? '/ig.svg' : selectedPlatform === 'facebook' ? '/fb.png' : '';
+  const currentAccounts = selectedPlatform === 'tiktok' ? tiktokAccounts : selectedPlatform === 'instagram' ? instagramAccounts : selectedPlatform === 'youtube' ? youtubeAccounts : [];
+  const currentError = selectedPlatform === 'tiktok' ? tiktokError : selectedPlatform === 'instagram' ? instagramError : selectedPlatform === 'facebook' ? facebookError : selectedPlatform === 'youtube' ? youtubeError : null;
+  const platformName = selectedPlatform === 'tiktok' ? 'TikTok' : selectedPlatform === 'instagram' ? 'Instagram' : selectedPlatform === 'facebook' ? 'Facebook' : selectedPlatform === 'youtube' ? 'YouTube' : selectedPlatform === 'all_platforms' ? 'All Platforms' : 'Scheduled Posts';
+  const platformLogo = selectedPlatform === 'tiktok' ? '/tiktok-1.svg' : selectedPlatform === 'instagram' ? '/ig.svg' : selectedPlatform === 'facebook' ? '/fb.png' : selectedPlatform === 'youtube' ? '/youtube.svg' : '';
   const platformDescription = selectedPlatform === 'tiktok' 
     ? 'Your daily TikTok performance in one glance' 
     : selectedPlatform === 'instagram'
     ? 'Your daily Instagram performance at a glance'
+    : selectedPlatform === 'youtube'
+    ? 'Your daily YouTube performance at a glance'
     : selectedPlatform === 'facebook'
     ? 'Your daily Facebook performance at a glance'
     : selectedPlatform === 'all_platforms'
@@ -816,6 +881,17 @@ export default function ClientDashboard({ clientId, clientName }: ClientDashboar
           </div>
         )}
         
+        {selectedPlatform === 'youtube' && (
+          <div className="mb-6">
+            <PlatformDateRangeSelector
+              platform="youtube"
+              onDateRangeChange={(newRange) => setDateRange(newRange)}
+              currentRange={dateRange}
+              earliestDataDate={earliestDataDate}
+            />
+          </div>
+        )}
+        
         {selectedPlatform === 'facebook' && (
           <div className="mb-6">
             <PlatformDateRangeSelector
@@ -879,6 +955,12 @@ export default function ClientDashboard({ clientId, clientName }: ClientDashboar
                 )
               ) : selectedPlatform === 'tiktok' ? (
                 <TotalViewsChart data={safeCurrentData} startDate={tiktokDateRange.startDate} endDate={tiktokDateRange.endDate} />
+              ) : selectedPlatform === 'youtube' ? (
+                youtubeData.length > 0 ? (
+                  <TotalViewsChart data={youtubeData} startDate={dateRange.startDate} endDate={dateRange.endDate} />
+                ) : (
+                  <div className="text-slate-300 py-8 text-center">Loading YouTube data...</div>
+                )
               ) : selectedPlatform === 'facebook' ? (
                 !metaAnalyticsLoading && metaAnalyticsData.length > 0 ? (
                   <>
@@ -891,13 +973,14 @@ export default function ClientDashboard({ clientId, clientName }: ClientDashboar
                   <div className="text-slate-300 py-8 text-center">Loading Facebook meta analytics data...</div>
                 )
               ) : selectedPlatform === 'all_platforms' ? (
-                <AllPlatformsTotalViewsChart 
-                  tiktokData={tiktokData} 
-                  instagramData={instagramData} 
-                  facebookData={facebookData}
-                  startDate={dateRange.startDate} 
-                  endDate={dateRange.endDate} 
-                />
+            <AllPlatformsTotalViewsChart 
+              tiktokData={tiktokData} 
+              instagramData={instagramData} 
+              facebookData={facebookData} 
+              youtubeData={youtubeData}
+              startDate={dateRange.startDate} 
+              endDate={dateRange.endDate} 
+            />
               ) : (
                 <TotalViewsChart data={safeCurrentData} startDate={tiktokDateRange.startDate} endDate={tiktokDateRange.endDate} />
               )}
@@ -912,6 +995,17 @@ export default function ClientDashboard({ clientId, clientName }: ClientDashboar
                   <div className="text-red-400 py-8 text-center">{currentError}</div>
                 ) : selectedPlatform === 'tiktok' ? (
                   <ViewsChart data={filteredData} />
+                ) : selectedPlatform === 'youtube' ? (
+                  youtubeRawData.length > 0 ? (
+                    <>
+                      <ViewsChart data={youtubeData} startDate={dateRange.startDate} endDate={dateRange.endDate} />
+                      <div className="mt-6">
+                        <YouTubeSubscriberChart data={youtubeRawData} startDate={dateRange.startDate} endDate={dateRange.endDate} />
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-slate-300 py-8 text-center">Loading YouTube data...</div>
+                  )
                 ) : selectedPlatform === 'facebook' ? (
                   !metaAnalyticsLoading && metaAnalyticsData.length > 0 ? (
                     <>
@@ -926,17 +1020,19 @@ export default function ClientDashboard({ clientId, clientName }: ClientDashboar
                   )
                 ) : selectedPlatform === 'all_platforms' ? (
                   <>
-                    <AllPlatformsDailyViewsChart 
-                      tiktokData={tiktokData} 
-                      instagramData={instagramData} 
-                      facebookData={facebookData}
-                      startDate={dateRange.startDate} 
-                      endDate={dateRange.endDate} 
-                    />
+            <AllPlatformsDailyViewsChart 
+              tiktokData={tiktokData} 
+              instagramData={instagramData} 
+              facebookData={facebookData} 
+              youtubeData={youtubeData}
+              startDate={dateRange.startDate} 
+              endDate={dateRange.endDate} 
+            />
                     <AllPlatformsDailyPostsChart 
                       tiktokData={tiktokData} 
                       instagramData={instagramData} 
                       facebookData={facebookData}
+                      youtubeData={youtubeData}
                       startDate={dateRange.startDate} 
                       endDate={dateRange.endDate} 
                     />
@@ -972,7 +1068,7 @@ export default function ClientDashboard({ clientId, clientName }: ClientDashboar
             
             {/* Accounts - Always use unfiltered data */}
             {selectedPlatform !== 'facebook' && selectedPlatform !== 'all_platforms' && (
-              <UnifiedAccountsCard platform={selectedPlatform as 'instagram' | 'tiktok'} clientId={clientId} />
+              <UnifiedAccountsCard platform={selectedPlatform as 'instagram' | 'tiktok' | 'youtube'} clientId={clientId} />
             )}
             
             {/* Total Performance Chart - Show below accounts for Instagram */}

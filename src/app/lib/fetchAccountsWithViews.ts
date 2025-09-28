@@ -28,57 +28,71 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-export async function fetchAccountsWithViews(platform?: 'tiktok' | 'instagram', clientId?: string): Promise<AccountWithViews[]> {
+export async function fetchAccountsWithViews(platform?: 'tiktok' | 'instagram' | 'facebook' | 'youtube', clientId?: string): Promise<AccountWithViews[]> {
   console.log('fetchAccountsWithViews called with platform:', platform, 'clientId:', clientId);
   
+  // Special debugging for YouTube
+  if (platform === 'youtube') {
+    console.log('YouTube accounts fetch - checking for YouTube accounts in accounts table...');
+  }
+  
   try {
-    console.log('fetchAccountsWithViews: Creating Supabase query...');
-    let query = supabase
+    // Get account information from accounts table
+    console.log('fetchAccountsWithViews: Fetching account info from accounts table...');
+    let accountsQuery = supabase
       .from('accounts')
       .select('*')
-      .order('views_count_total', { ascending: false });
+      .order('followers_count', { ascending: false });
 
     // Filter by platform if specified
     if (platform) {
       console.log('fetchAccountsWithViews: Filtering by platform:', platform);
-      query = query.eq('platform', platform);
+      accountsQuery = accountsQuery.eq('platform', platform);
     }
 
     // Filter by client_id if specified
     if (clientId && clientId !== 'all') {
       console.log('fetchAccountsWithViews: Filtering by clientId:', clientId);
-      query = query.eq('client_id', clientId);
+      accountsQuery = accountsQuery.eq('client_id', clientId);
     }
 
     // Only show active accounts
     console.log('fetchAccountsWithViews: Filtering by account_status: Active');
-    query = query.eq('account_status', 'Active');
+    accountsQuery = accountsQuery.eq('account_status', 'Active');
 
-    console.log('fetchAccountsWithViews: Executing query...');
-    const { data, error } = await query;
+    const { data: accountsData, error: accountsError } = await accountsQuery;
     
-    if (error) {
-      console.error('fetchAccountsWithViews Supabase error:', error);
-      throw error;
+    if (accountsError) {
+      console.error('fetchAccountsWithViews accounts error:', accountsError);
+      throw accountsError;
     }
     
-    console.log('fetchAccountsWithViews raw result:', { count: data?.length || 0, sample: data?.[0] });
+    console.log('fetchAccountsWithViews accounts result:', { count: accountsData?.length || 0, sample: accountsData?.[0] });
     
-    // Transform the data to match the expected interface
-    const transformedData = (data || []).map(account => ({
+    // Special debugging for YouTube
+    if (platform === 'youtube') {
+      console.log('YouTube accounts found:', {
+        total: accountsData?.length || 0,
+        accounts: accountsData?.map(acc => ({ username: acc.username, platform: acc.platform, client_id: acc.client_id })) || []
+      });
+    }
+    
+    // Transform the data to match the expected interface - use accounts table data directly
+    const transformedData = (accountsData || []).map(account => ({
       username: account.username,
       profile_url: account.profile_url || '',
-      // Map views to match component interface
+      // Use account table data directly for all metrics
       views: account.views_count_total || 0,
       highest_view_post: account.views_count_total || 0,
       post_count: account.media_count || 0,
-      posts: account.media_count || 0, // Add this for component compatibility
+      posts: account.media_count || 0,
       average_views: account.media_count && account.views_count_total 
         ? Math.floor(account.views_count_total / account.media_count) 
         : 0,
       avg_views: account.media_count && account.views_count_total 
         ? Math.floor(account.views_count_total / account.media_count) 
-        : 0, // Add this for component compatibility
+        : 0,
+      // Use account info from accounts table for profile details
       followers: account.followers_count || 0,
       platform: account.platform,
       client_id: account.client_id,
@@ -87,12 +101,13 @@ export async function fetchAccountsWithViews(platform?: 'tiktok' | 'instagram', 
       account_niche: account.account_niche,
       pfp_url: account.pfp_url,
       account_status: account.account_status,
-      views_count_total: account.views_count_total,
-      likes_count_total: account.likes_count_total,
-      comments_count_total: account.comments_count_total,
-      shares_count_total: account.shares_count_total,
-      profile_views: account.profile_views,
-      reach_count: account.reach_count,
+      // Use account table data for engagement data
+      views_count_total: account.views_count_total || 0,
+      likes_count_total: account.likes_count_total || 0,
+      comments_count_total: account.comments_count_total || 0,
+      shares_count_total: account.shares_count_total || 0,
+      profile_views: account.profile_views || 0,
+      reach_count: account.reach_count || 0,
       last_updated: account.last_updated,
       // Add likes and comments for component compatibility
       likes: account.likes_count_total || 0,

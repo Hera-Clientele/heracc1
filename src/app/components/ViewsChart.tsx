@@ -43,13 +43,34 @@ function getLastUpdateTime() {
   return lastUpdate;
 }
 
-export default function ViewsChart({ data }: { data: Row[] }) {
-  // Filter out future dates
+interface ViewsChartProps {
+  data: Row[];
+  startDate?: string;
+  endDate?: string;
+}
+
+export default function ViewsChart({ data, startDate, endDate }: ViewsChartProps) {
+  // Filter data by date range if provided and ensure no future dates
+  let filteredData = data;
   const currentDate = getCurrentTimeInAppTimezone().startOf('day');
-  const filteredData = data.filter(row => {
-    const rowDate = getDateInAppTimezone(row.day);
-    return rowDate.isBefore(currentDate.add(1, 'day'));
-  });
+  
+  if (startDate && endDate) {
+    filteredData = data.filter(row => {
+      const rowDate = getDateInAppTimezone(row.day);
+      const start = getDateInAppTimezone(startDate);
+      const end = getDateInAppTimezone(endDate);
+      // Only show data within the selected range and not in the future
+      return rowDate.isAfter(start.subtract(1, 'day')) && 
+             rowDate.isBefore(end.add(1, 'day')) && 
+             rowDate.isBefore(currentDate.add(1, 'day'));
+    });
+  } else {
+    // Filter out future dates only
+    filteredData = data.filter(row => {
+      const rowDate = getDateInAppTimezone(row.day);
+      return rowDate.isBefore(currentDate.add(1, 'day'));
+    });
+  }
 
   // Insert initial zero point for 2025-07-07
   const initialDate = "2025-07-07";

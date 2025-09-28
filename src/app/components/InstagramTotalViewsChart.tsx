@@ -32,9 +32,10 @@ interface InstagramTotalViewsChartProps {
   data: InstagramRow[];
   startDate?: string;
   endDate?: string;
+  platform?: 'instagram' | 'facebook' | 'youtube';
 }
 
-export default function InstagramTotalViewsChart({ data, startDate, endDate }: InstagramTotalViewsChartProps) {
+export default function InstagramTotalViewsChart({ data, startDate, endDate, platform = 'instagram' }: InstagramTotalViewsChartProps) {
   // Filter data by date range if provided and ensure no future dates
   let filteredData = data;
   const currentDate = dayjs().tz('America/New_York').startOf('day');

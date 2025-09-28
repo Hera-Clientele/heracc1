@@ -8,7 +8,7 @@ interface MetaAnalyticsDailyPostsChartProps {
   data: any[];
   startDate: string;
   endDate: string;
-  platform: 'instagram' | 'facebook';
+  platform: 'instagram' | 'facebook' | 'youtube';
 }
 
 interface PostsTooltipProps {
