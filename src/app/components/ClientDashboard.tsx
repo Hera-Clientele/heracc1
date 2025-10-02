@@ -747,6 +747,13 @@ export default function ClientDashboard({ clientId, clientName }: ClientDashboar
     }
   }, [selectedInstagramAccounts, instagramDateRange, selectedPlatform]);
 
+  // Set all accounts as selected by default when instagramAccountNames are loaded
+  useEffect(() => {
+    if (instagramAccountNames.length > 0 && selectedInstagramAccounts.length === 0) {
+      setSelectedInstagramAccounts(instagramAccountNames);
+    }
+  }, [instagramAccountNames, selectedInstagramAccounts]);
+
   return (
     <main className="min-h-screen bg-gradient-to-br from-[#18181b] to-[#23272f] flex flex-col items-center py-12 font-sans">
       <div className="w-full max-w-4xl">
@@ -791,9 +798,9 @@ export default function ClientDashboard({ clientId, clientName }: ClientDashboar
             {/* Quick filter buttons */}
             <div className="flex flex-wrap gap-2 mb-4">
               <button
-                onClick={() => setSelectedInstagramAccounts([])}
+                onClick={() => setSelectedInstagramAccounts(instagramAccountNames)}
                 className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-                  selectedInstagramAccounts.length === 0
+                  selectedInstagramAccounts.length === instagramAccountNames.length
                     ? 'bg-blue-600 text-white'
                     : 'bg-white/10 text-slate-300 hover:bg-white/20'
                 }`}

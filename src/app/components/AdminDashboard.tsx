@@ -288,6 +288,13 @@ export default function AdminDashboard({ onLogout }: AdminDashboardProps) {
     fetchAllData();
   }, [dateRange, selectedClients, selectedInstagramAccounts]);
 
+  // Set all accounts as selected by default when instagramAccounts are loaded
+  useEffect(() => {
+    if (instagramAccounts.length > 0 && selectedInstagramAccounts.length === 0) {
+      setSelectedInstagramAccounts(instagramAccounts);
+    }
+  }, [instagramAccounts, selectedInstagramAccounts]);
+
   // Calculate aggregated statistics based on selected platforms
   const getAggregatedStats = () => {
     const totalTiktokViews = selectedPlatforms.includes('tiktok') ? tiktokData.reduce((sum, row) => sum + (Number(row.views) || 0), 0) : 0;
@@ -472,9 +479,9 @@ export default function AdminDashboard({ onLogout }: AdminDashboardProps) {
               {/* Quick filter buttons */}
               <div className="flex flex-wrap gap-2 mb-4">
                 <button
-                  onClick={() => setSelectedInstagramAccounts([])}
+                  onClick={() => setSelectedInstagramAccounts(instagramAccounts)}
                   className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-                    selectedInstagramAccounts.length === 0
+                    selectedInstagramAccounts.length === instagramAccounts.length
                       ? 'bg-blue-600 text-white'
                       : 'bg-white/10 text-slate-300 hover:bg-white/20'
                   }`}
