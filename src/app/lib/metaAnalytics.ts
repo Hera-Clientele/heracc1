@@ -181,10 +181,9 @@ export async function fetchMetaAnalyticsDailyAgg(clientId: string, platform?: 'i
       return result as DailyTotalsRow[];
     }
     
-    // For YouTube or when date range is specified, skip materialized view and go directly to fallback
-    // This ensures we get complete data for the specified date range
-    if (platform === 'youtube' || (startDate && endDate)) {
-      console.log('Skipping materialized view for complete date range data, using fallback query directly');
+    // For YouTube, skip materialized view and go directly to fallback
+    if (platform === 'youtube') {
+      console.log('Skipping materialized view for YouTube, using fallback query directly');
       // Skip to fallback logic below
     } else {
       // Try materialized view first for other platforms
@@ -239,35 +238,30 @@ export async function fetchMetaAnalyticsDailyAgg(clientId: string, platform?: 'i
             hasFullCoverage: firstDate <= startDate && lastDate >= endDate
           });
           
-          // If materialized view doesn't have full coverage, use fallback
-          if (firstDate > startDate || lastDate < endDate) {
-            console.log('Materialized view has incomplete date coverage, using fallback');
-          } else {
-            // Return the data directly from materialized view
-            const result = data.map(row => ({
-              day: row.date,
-              platform: row.platform,
-              total_views: row.total_views || 0,
-              total_reach: row.total_reach || 0,
-              total_profile_visits: row.total_profile_visits || 0,
-              total_posts: row.total_posts || 0,
-              total_accounts: row.total_accounts || 0,
-              active_accounts: row.active_accounts || 0,
-              account_usernames: row.account_usernames || '',
-              // TikTok-specific fields
-              total_tt_profile_views: row.total_tt_profile_views || 0,
-              total_likes: row.total_likes || 0,
-              total_shares: row.total_shares || 0,
-              total_comments: row.total_comments || 0,
-              total_tt_followers: row.total_tt_followers || 0,
-              // YouTube-specific fields
-              total_yt_subs_gained: row.total_yt_subs_gained || 0,
-              total_yt_subs_lost: row.total_yt_subs_lost || 0,
-            }));
-            
-            console.log('Materialized view result:', { count: result.length, sample: result[0] });
-            return result as DailyTotalsRow[];
-          }
+          // Return the data directly from materialized view (it should have the requested date range due to the query filters)
+          const result = data.map(row => ({
+            day: row.date,
+            platform: row.platform,
+            total_views: row.total_views || 0,
+            total_reach: row.total_reach || 0,
+            total_profile_visits: row.total_profile_visits || 0,
+            total_posts: row.total_posts || 0,
+            total_accounts: row.total_accounts || 0,
+            active_accounts: row.active_accounts || 0,
+            account_usernames: row.account_usernames || '',
+            // TikTok-specific fields
+            total_tt_profile_views: row.total_tt_profile_views || 0,
+            total_likes: row.total_likes || 0,
+            total_shares: row.total_shares || 0,
+            total_comments: row.total_comments || 0,
+            total_tt_followers: row.total_tt_followers || 0,
+            // YouTube-specific fields
+            total_yt_subs_gained: row.total_yt_subs_gained || 0,
+            total_yt_subs_lost: row.total_yt_subs_lost || 0,
+          }));
+          
+          console.log('Materialized view result:', { count: result.length, sample: result[0] });
+          return result as DailyTotalsRow[];
         } else {
           // Return the data directly from materialized view
           const result = data.map(row => ({
@@ -299,6 +293,26 @@ export async function fetchMetaAnalyticsDailyAgg(clientId: string, platform?: 'i
     
     // Fallback: try to get data from the raw meta_analytics table
     console.log('Using fallback query for meta_analytics with clientId:', clientId, 'platform:', platform);
+    
+    // First, let's check what the actual date range is in the database
+    const { data: dateRangeCheck, error: dateRangeError } = await supabase
+      .from('meta_analytics')
+      .select('date')
+      .eq('client_id', parseInt(clientId, 10))
+      .order('date', { ascending: true });
+    
+    if (dateRangeCheck && dateRangeCheck.length > 0) {
+      const firstDate = dateRangeCheck[0]?.date;
+      const lastDate = dateRangeCheck[dateRangeCheck.length - 1]?.date;
+      console.log('Actual date range in meta_analytics table:', {
+        firstDate,
+        lastDate,
+        totalRecords: dateRangeCheck.length,
+        requestedStart: startDate,
+        requestedEnd: endDate
+      });
+    }
+    
     let fallbackQuery = supabase
       .from('meta_analytics')
       .select(`
@@ -325,6 +339,14 @@ export async function fetchMetaAnalyticsDailyAgg(clientId: string, platform?: 'i
       fallbackQuery = fallbackQuery.eq('platform', platform);
     }
     
+    // Add date filtering if provided
+    if (startDate) {
+      fallbackQuery = fallbackQuery.gte('date', startDate);
+    }
+    if (endDate) {
+      fallbackQuery = fallbackQuery.lte('date', endDate);
+    }
+    
     const { data: fallbackData, error: fallbackError } = await fallbackQuery;
     
     // Log detailed date range information
@@ -343,9 +365,21 @@ export async function fetchMetaAnalyticsDailyAgg(clientId: string, platform?: 'i
           firstDate: firstDate,
           lastDate: lastDate,
           requestedStart: startDate,
-          requestedEnd: endDate
+          requestedEnd: endDate,
+          actualDataRange: `${firstDate} to ${lastDate}`,
+          requestedRange: `${startDate} to ${endDate}`
         }
       });
+      
+      // Check if data covers the full requested range
+      if (firstDate && lastDate && startDate && endDate) {
+        const hasFullCoverage = firstDate <= startDate && lastDate >= endDate;
+        console.log('Data coverage check:', {
+          hasFullCoverage,
+          missingStart: firstDate > startDate ? `${startDate} to ${firstDate}` : 'none',
+          missingEnd: lastDate < endDate ? `${lastDate} to ${endDate}` : 'none'
+        });
+      }
     } else {
       console.log('Fallback query result:', {
         error: fallbackError,

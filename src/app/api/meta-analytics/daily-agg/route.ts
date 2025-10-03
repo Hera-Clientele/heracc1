@@ -53,7 +53,11 @@ export async function GET(req: NextRequest) {
       await setCachedData(cacheKey, data, CACHE_TTL.DAILY_AGG);
     }
     
-    console.log('meta-analytics daily-agg API returning:', { count: data?.length || 0, sample: data?.[0] });
+    console.log('meta-analytics daily-agg API returning:', { 
+      count: data?.length || 0, 
+      sample: data?.[0],
+      dataStructure: data?.length > 0 ? Object.keys(data[0]) : 'no data'
+    });
     return Response.json({ data });
   } catch (error: any) {
     return Response.json({ error: error.message }, { status: 500 });

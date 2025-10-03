@@ -425,31 +425,73 @@ export default function ClientDashboard({ clientId, clientName }: ClientDashboar
   const fetchInstagramDataWithFiltering = async () => {
     if (selectedPlatform !== 'instagram') return;
     
+    console.log('fetchInstagramDataWithFiltering called with:', {
+      clientId,
+      startDate: instagramDateRange.startDate,
+      endDate: instagramDateRange.endDate,
+      selectedAccounts: selectedInstagramAccounts
+    });
+    
     try {
-      // Fetch filtered data
-      const filteredData = await fetchMetaAnalyticsDailyAgg(
-        clientId, 
-        'instagram', 
-        instagramDateRange.startDate, 
-        instagramDateRange.endDate,
-        selectedInstagramAccounts.length > 0 ? selectedInstagramAccounts : undefined
-      );
+      setMetaAnalyticsLoading(true);
       
-      // Fetch unfiltered data for comparison if accounts are filtered
-      let unfilteredData: any[] = [];
+      // Build URL with parameters
+      const params = new URLSearchParams({
+        clientId,
+        platform: 'instagram',
+        startDate: instagramDateRange.startDate,
+        endDate: instagramDateRange.endDate
+      });
+      
       if (selectedInstagramAccounts.length > 0) {
-        unfilteredData = await fetchMetaAnalyticsDailyAgg(
-          clientId, 
-          'instagram', 
-          instagramDateRange.startDate, 
-          instagramDateRange.endDate
-        );
+        params.append('accountUsernames', JSON.stringify(selectedInstagramAccounts));
       }
       
-      setMetaAnalyticsData(unfilteredData); // Use unfiltered data for charts
-      setInstagramUnfilteredData(unfilteredData);
+      // Fetch filtered data
+      const response = await fetch(`/api/meta-analytics/daily-agg?${params.toString()}`);
+      
+      if (response.ok) {
+        const result = await response.json();
+        const filteredData = result.data || [];
+        
+        console.log('Filtered data result:', { count: filteredData.length, sample: filteredData[0] });
+        
+        // Fetch unfiltered data for comparison if accounts are filtered
+        let unfilteredData: any[] = [];
+        if (selectedInstagramAccounts.length > 0) {
+          const unfilteredParams = new URLSearchParams({
+            clientId,
+            platform: 'instagram',
+            startDate: instagramDateRange.startDate,
+            endDate: instagramDateRange.endDate
+          });
+          
+          const unfilteredResponse = await fetch(`/api/meta-analytics/daily-agg?${unfilteredParams.toString()}`);
+          if (unfilteredResponse.ok) {
+            const unfilteredResult = await unfilteredResponse.json();
+            unfilteredData = unfilteredResult.data || [];
+          }
+          console.log('Unfiltered data result:', { count: unfilteredData.length, sample: unfilteredData[0] });
+        } else {
+          // If no accounts selected, use the filtered data as unfiltered data
+          unfilteredData = filteredData;
+        }
+        
+        setMetaAnalyticsData(unfilteredData); // Use unfiltered data for charts
+        setInstagramUnfilteredData(unfilteredData);
+        
+        console.log('Data set to state:', { count: unfilteredData.length });
+      } else {
+        console.error('Failed to fetch Instagram meta analytics data');
+        setMetaAnalyticsData([]);
+        setInstagramUnfilteredData([]);
+      }
     } catch (err) {
       console.error('Error fetching Instagram data with filtering:', err);
+      setMetaAnalyticsData([]);
+      setInstagramUnfilteredData([]);
+    } finally {
+      setMetaAnalyticsLoading(false);
     }
   };
 
@@ -689,10 +731,14 @@ export default function ClientDashboard({ clientId, clientName }: ClientDashboar
   const [metaAnalyticsData, setMetaAnalyticsData] = useState<any[]>([]);
   const [metaAnalyticsLoading, setMetaAnalyticsLoading] = useState(true);
 
-  const fetchMetaAnalytics = useCallback(async () => {
+  const fetchMetaAnalytics = useCallback(async (platform?: 'instagram' | 'facebook') => {
     try {
       setMetaAnalyticsLoading(true);
-      const response = await fetch(`/api/meta-analytics/daily-agg?clientId=${clientId}`);
+      const url = platform 
+        ? `/api/meta-analytics/daily-agg?clientId=${clientId}&platform=${platform}`
+        : `/api/meta-analytics/daily-agg?clientId=${clientId}`;
+      
+      const response = await fetch(url);
       if (response.ok) {
         const result = await response.json();
         if (result.data && Array.isArray(result.data)) {
@@ -713,10 +759,14 @@ export default function ClientDashboard({ clientId, clientName }: ClientDashboar
     }
   }, [clientId]);
 
-  // Fetch meta analytics data when client changes
+  // Fetch meta analytics data when client changes (only for non-Instagram platforms)
   useEffect(() => {
-    fetchMetaAnalytics();
-  }, [fetchMetaAnalytics]);
+    if (selectedPlatform === 'facebook') {
+      fetchMetaAnalytics('facebook');
+    } else if (selectedPlatform !== 'instagram') {
+      fetchMetaAnalytics();
+    }
+  }, [fetchMetaAnalytics, selectedPlatform]);
 
   // Calculate earliest available date from meta analytics data
   const earliestDataDate = useMemo(() => {
@@ -740,12 +790,12 @@ export default function ClientDashboard({ clientId, clientName }: ClientDashboar
     });
   }, [metaAnalyticsData, metaAnalyticsLoading, selectedPlatform]);
 
-  // Effect to fetch Instagram data when filtering changes
+  // Effect to fetch Instagram data when filtering changes or platform changes to Instagram
   useEffect(() => {
     if (selectedPlatform === 'instagram') {
       fetchInstagramDataWithFiltering();
     }
-  }, [selectedInstagramAccounts, instagramDateRange, selectedPlatform]);
+  }, [selectedInstagramAccounts, instagramDateRange, selectedPlatform, clientId]);
 
   // Set all accounts as selected by default when instagramAccountNames are loaded
   useEffect(() => {

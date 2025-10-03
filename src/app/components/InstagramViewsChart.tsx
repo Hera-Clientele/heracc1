@@ -33,39 +33,30 @@ function getNextUpdateTime() {
 }
 
 export default function InstagramViewsChart({ data, startDate, endDate, platform = 'instagram', unfilteredData = [], showComparison = false }: InstagramViewsChartProps) {
-  // Filter data by date range if provided
+  // Data should already be filtered by date range from the API
   let filteredData = data;
   
-  if (startDate && endDate) {
-    filteredData = data.filter(row => {
-      const rowDate = dayjs(row.date || row.day);
-      const start = dayjs(startDate);
-      const end = dayjs(endDate);
-      // Only show data within the selected range
-      return rowDate.isAfter(start.subtract(1, 'day')) && 
-             rowDate.isBefore(end.add(1, 'day'));
+  // Only apply additional filtering if needed for debugging
+  if (startDate && endDate && process.env.NODE_ENV === 'development') {
+    console.log('Chart component date filtering:', {
+      dataLength: data.length,
+      startDate,
+      endDate,
+      sampleData: data[0]
     });
   }
 
-  // Filter for Instagram platform only
-  filteredData = filteredData.filter(row => row.platform === 'instagram');
+  // Filter for Instagram platform only (if platform field exists)
+  if (filteredData.length > 0 && filteredData[0].platform !== undefined) {
+    filteredData = filteredData.filter(row => row.platform === 'instagram');
+  }
 
   // Process unfiltered data if provided
   let unfilteredChartData: any[] = [];
   if (showComparison && unfilteredData.length > 0) {
-    let filteredUnfilteredData = unfilteredData;
-    if (startDate && endDate) {
-      filteredUnfilteredData = unfilteredData.filter(row => {
-        const rowDate = dayjs(row.date || row.day);
-        const start = dayjs(startDate);
-        const end = dayjs(endDate);
-        return rowDate.isAfter(start.subtract(1, 'day')) && 
-               rowDate.isBefore(end.add(1, 'day'));
-      });
-    }
-    
-    unfilteredChartData = filteredUnfilteredData
-      .filter(row => row.platform === 'instagram')
+    // Unfiltered data should already be filtered by date range from the API
+    unfilteredChartData = unfilteredData
+      .filter(row => !row.platform || row.platform === 'instagram')
       .map(row => ({
         date: row.date || row.day,
         views: Number(row.total_views),
@@ -78,20 +69,52 @@ export default function InstagramViewsChart({ data, startDate, endDate, platform
   // Ensure all fields are numbers
   const chartData = filteredData.map(row => ({
     date: row.date || row.day,
-    views: Number(row.total_views),
-    reach: Number(row.total_reach),
-    accounts: Number(row.total_accounts),
-    active_accounts: Number(row.active_accounts),
+    views: Number(row.total_views || row.views || 0),
+    reach: Number(row.total_reach || row.reach || 0),
+    accounts: Number(row.total_accounts || row.accounts || 0),
+    active_accounts: Number(row.active_accounts || 0),
+  }));
+
+  // If no data after filtering, try to use original data
+  const finalChartData = chartData.length > 0 ? chartData : data.map(row => ({
+    date: row.date || row.day,
+    views: Number(row.total_views || row.views || 0),
+    reach: Number(row.total_reach || row.reach || 0),
+    accounts: Number(row.total_accounts || row.accounts || 0),
+    active_accounts: Number(row.active_accounts || 0),
   }));
 
   // Create combined chart data for comparison
-  const combinedChartData = chartData.map(filteredRow => {
+  const combinedChartData = finalChartData.map(filteredRow => {
     const unfilteredRow = unfilteredChartData.find(row => row.date === filteredRow.date);
     return {
       ...filteredRow,
       unfilteredViews: unfilteredRow?.views || 0,
       unfilteredReach: unfilteredRow?.reach || 0,
     };
+  });
+
+  // Debug logging
+  console.log('InstagramViewsChart data debug:', {
+    originalDataLength: data.length,
+    originalDataSample: data[0],
+    filteredDataLength: filteredData.length,
+    filteredDataSample: filteredData[0],
+    chartDataLength: chartData.length,
+    finalChartDataLength: finalChartData.length,
+    combinedChartDataLength: combinedChartData.length,
+    showComparison,
+    unfilteredDataLength: unfilteredData.length,
+    unfilteredChartDataLength: unfilteredChartData.length,
+    sampleChartData: chartData[0],
+    sampleFinalChartData: finalChartData[0],
+    sampleCombinedData: combinedChartData[0],
+    startDate,
+    endDate,
+    actualDateRange: finalChartData.length > 0 ? {
+      firstDate: finalChartData[0]?.date,
+      lastDate: finalChartData[finalChartData.length - 1]?.date
+    } : 'no data'
   });
 
   // Get update times
@@ -158,7 +181,7 @@ export default function InstagramViewsChart({ data, startDate, endDate, platform
       </div>
 
       <ResponsiveContainer width="100%" height={300}>
-        <LineChart data={combinedChartData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+        <LineChart data={combinedChartData.length > 0 ? combinedChartData : []} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
           <defs>
             <linearGradient id="colorViews" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor="#E4405F" stopOpacity={0.5}/>
