@@ -35,25 +35,17 @@ export default function MetaAnalyticsChart({
   startDate, 
   endDate 
 }: MetaAnalyticsChartProps) {
-  // Filter data by date range if provided and ensure no future dates
+  // Filter data by date range if provided
   let filteredData = data;
-  const currentDate = dayjs().tz('America/New_York').startOf('day');
   
   if (startDate && endDate) {
     filteredData = data.filter(row => {
       const rowDate = dayjs(row.day);
       const start = dayjs(startDate);
       const end = dayjs(endDate);
-      // Only show data within the selected range and not in the future
+      // Only show data within the selected range
       return rowDate.isAfter(start.subtract(1, 'day')) && 
-             rowDate.isBefore(end.add(1, 'day')) && 
-             rowDate.isBefore(currentDate.add(1, 'day'));
-    });
-  } else {
-    // If no date range specified, still filter out future dates
-    filteredData = data.filter(row => {
-      const rowDate = dayjs(row.day);
-      return rowDate.isBefore(currentDate.add(1, 'day'));
+             rowDate.isBefore(end.add(1, 'day'));
     });
   }
 
@@ -153,7 +145,7 @@ export default function MetaAnalyticsChart({
             dataKey="date"
             tick={{ fontSize: 12, fill: '#9CA3AF' }}
             tickFormatter={(date) => dayjs(date).tz('America/New_York').format("MM/DD")}
-            interval="preserveStartEnd"
+            interval={Math.max(1, Math.floor(chartData.length / 10))}
           />
           <YAxis 
             tick={{ fontSize: 12, fill: '#9CA3AF' }} 
@@ -180,7 +172,8 @@ export default function MetaAnalyticsChart({
             dataKey="views"
             stroke={colors.views}
             strokeWidth={2}
-            dot={{ fill: colors.views, strokeWidth: 2, r: 4 }}
+            dot={false}
+            connectNulls={false}
             activeDot={{ r: 6, stroke: colors.views, strokeWidth: 2 }}
           />
           
@@ -196,7 +189,8 @@ export default function MetaAnalyticsChart({
             dataKey="reach"
             stroke={colors.reach}
             strokeWidth={2}
-            dot={{ fill: colors.reach, strokeWidth: 2, r: 4 }}
+            dot={false}
+            connectNulls={false}
             activeDot={{ r: 6, stroke: colors.reach, strokeWidth: 2 }}
           />
           
@@ -212,7 +206,8 @@ export default function MetaAnalyticsChart({
             dataKey="profile_visits"
             stroke={colors.profile_visits}
             strokeWidth={2}
-            dot={{ fill: colors.profile_visits, strokeWidth: 2, r: 4 }}
+            dot={false}
+            connectNulls={false}
             activeDot={{ r: 6, stroke: colors.profile_visits, strokeWidth: 2 }}
           />
         </LineChart>

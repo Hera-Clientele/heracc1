@@ -88,8 +88,8 @@ export async function invalidateCache(pattern: string): Promise<void> {
 
 // Cache key generators for specific data types
 export const cacheKeys = {
-  dailyAgg: (clientId: string, platform: string) => 
-    generateCacheKey('daily_agg', { clientId, platform }),
+  dailyAgg: (clientId: string, platform: string, startDate?: string, endDate?: string, accountUsernames?: string) => 
+    generateCacheKey('daily_agg', { clientId, platform, startDate, endDate, accountUsernames }),
   
   topPosts: (clientId: string, platform: string, period: string) => 
     generateCacheKey('top_posts', { clientId, platform, period }),

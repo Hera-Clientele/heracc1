@@ -68,11 +68,11 @@ export default function DateRangeSelector({ onDateRangeChange, currentRange, ear
         break;
       case 'last_3_months':
         startDate = now.subtract(3, 'months').startOf('month').format('YYYY-MM-DD');
-        endDate = now.endOf('month').format('YYYY-MM-DD');
+        endDate = now.format('YYYY-MM-DD');
         break;
       case 'last_6_months':
         startDate = now.subtract(6, 'months').startOf('month').format('YYYY-MM-DD');
-        endDate = now.endOf('month').format('YYYY-MM-DD');
+        endDate = now.format('YYYY-MM-DD');
         break;
       case 'this_year':
         startDate = now.startOf('year').format('YYYY-MM-DD');

@@ -33,25 +33,17 @@ function getNextUpdateTime() {
 }
 
 export default function InstagramViewsChart({ data, startDate, endDate, platform = 'instagram', unfilteredData = [], showComparison = false }: InstagramViewsChartProps) {
-  // Filter data by date range if provided and ensure no future dates
+  // Filter data by date range if provided
   let filteredData = data;
-  const currentDate = dayjs().tz('America/New_York').startOf('day');
   
   if (startDate && endDate) {
     filteredData = data.filter(row => {
       const rowDate = dayjs(row.date || row.day);
       const start = dayjs(startDate);
       const end = dayjs(endDate);
-      // Only show data within the selected range and not in the future
+      // Only show data within the selected range
       return rowDate.isAfter(start.subtract(1, 'day')) && 
-             rowDate.isBefore(end.add(1, 'day')) && 
-             rowDate.isBefore(currentDate.add(1, 'day'));
-    });
-  } else {
-    // If no date range specified, still filter out future dates
-    filteredData = data.filter(row => {
-      const rowDate = dayjs(row.date || row.day);
-      return rowDate.isBefore(currentDate.add(1, 'day'));
+             rowDate.isBefore(end.add(1, 'day'));
     });
   }
 
@@ -68,13 +60,7 @@ export default function InstagramViewsChart({ data, startDate, endDate, platform
         const start = dayjs(startDate);
         const end = dayjs(endDate);
         return rowDate.isAfter(start.subtract(1, 'day')) && 
-               rowDate.isBefore(end.add(1, 'day')) && 
-               rowDate.isBefore(currentDate.add(1, 'day'));
-      });
-    } else {
-      filteredUnfilteredData = unfilteredData.filter(row => {
-        const rowDate = dayjs(row.date || row.day);
-        return rowDate.isBefore(currentDate.add(1, 'day'));
+               rowDate.isBefore(end.add(1, 'day'));
       });
     }
     
@@ -189,7 +175,7 @@ export default function InstagramViewsChart({ data, startDate, endDate, platform
             dataKey="date"
             tick={{ fontSize: 12, fill: '#9CA3AF' }}
             tickFormatter={(date) => dayjs(date).tz('America/New_York').format("MM/DD")}
-            interval="preserveStartEnd"
+            interval={Math.max(1, Math.floor(combinedChartData.length / 10))}
           />
           <YAxis 
             tick={{ fontSize: 12, fill: '#9CA3AF' }} 
@@ -216,7 +202,8 @@ export default function InstagramViewsChart({ data, startDate, endDate, platform
             dataKey="views"
             stroke="#E4405F"
             strokeWidth={2}
-            dot={{ fill: "#E4405F", strokeWidth: 2, r: 4 }}
+            dot={false}
+            connectNulls={false}
             activeDot={{ r: 6, stroke: "#E4405F", strokeWidth: 2 }}
           />
           
@@ -232,7 +219,8 @@ export default function InstagramViewsChart({ data, startDate, endDate, platform
             dataKey="reach"
             stroke="#833AB4"
             strokeWidth={2}
-            dot={{ fill: "#833AB4", strokeWidth: 2, r: 4 }}
+            dot={false}
+            connectNulls={false}
             activeDot={{ r: 6, stroke: "#833AB4", strokeWidth: 2 }}
           />
           

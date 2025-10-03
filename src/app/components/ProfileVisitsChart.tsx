@@ -134,6 +134,7 @@ const ProfileVisitsChart: React.FC<ProfileVisitsChartProps> = ({ data, startDate
               stroke="#9CA3AF"
               tickFormatter={(value) => dayjs(value).format('MM/DD')}
               tick={{ fontSize: 12 }}
+              interval={Math.max(1, Math.floor(chartData.length / 10))}
             />
             <YAxis 
               stroke="#9CA3AF"
@@ -147,7 +148,8 @@ const ProfileVisitsChart: React.FC<ProfileVisitsChartProps> = ({ data, startDate
                 dataKey="net_subs"
                 stroke={(colors as any).net_subs}
                 strokeWidth={3}
-                dot={{ fill: (colors as any).net_subs, strokeWidth: 2, r: 5 }}
+                dot={false}
+                connectNulls={false}
                 activeDot={{ r: 7, stroke: (colors as any).net_subs, strokeWidth: 2 }}
               />
             ) : (
@@ -156,7 +158,8 @@ const ProfileVisitsChart: React.FC<ProfileVisitsChartProps> = ({ data, startDate
                 dataKey="profile_visits"
                 stroke={(colors as any).profile_visits}
                 strokeWidth={2}
-                dot={{ fill: (colors as any).profile_visits, strokeWidth: 2, r: 4 }}
+                dot={false}
+                connectNulls={false}
                 activeDot={{ r: 6, stroke: (colors as any).profile_visits, strokeWidth: 2 }}
               />
             )}

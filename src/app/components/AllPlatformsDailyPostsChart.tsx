@@ -36,14 +36,9 @@ export default function AllPlatformsDailyPostsChart({
   startDate, 
   endDate 
 }: AllPlatformsDailyPostsChartProps) {
-  // Filter out future dates and create aggregated data
-  const currentDate = dayjs().tz('America/New_York').startOf('day');
-  
+  // Filter data by date range if provided
   const filterData = (data: any[]) => {
-    let filtered = data.filter(row => {
-      const rowDate = dayjs(row.day);
-      return rowDate.isBefore(currentDate.add(1, 'day'));
-    });
+    let filtered = data;
     
     if (startDate && endDate) {
       filtered = filtered.filter(row => {
@@ -155,7 +150,7 @@ export default function AllPlatformsDailyPostsChart({
             dataKey="date"
             tick={{ fontSize: 12 }}
             tickFormatter={(date) => dayjs(date).tz('America/New_York').format("MM/DD")}
-            interval="preserveStartEnd"
+            interval={Math.max(1, Math.floor(dailyPostsData.length / 10))}
           />
           <YAxis 
             tick={{ fontSize: 12 }} 

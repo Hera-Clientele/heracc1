@@ -446,7 +446,7 @@ export default function ClientDashboard({ clientId, clientName }: ClientDashboar
         );
       }
       
-      setMetaAnalyticsData(filteredData);
+      setMetaAnalyticsData(unfilteredData); // Use unfiltered data for charts
       setInstagramUnfilteredData(unfilteredData);
     } catch (err) {
       console.error('Error fetching Instagram data with filtering:', err);

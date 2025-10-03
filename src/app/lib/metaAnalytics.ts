@@ -96,7 +96,8 @@ export async function fetchMetaAnalyticsDailyAgg(clientId: string, platform?: 'i
         `)
         .eq('client_id', parseInt(clientId, 10))
         .in('account_name', accountUsernames)
-        .order('date', { ascending: true });
+        .order('date', { ascending: true })
+        .limit(5000); // Increase limit to handle large date ranges
       
       if (platform) {
         query = query.eq('platform', platform);
@@ -180,9 +181,10 @@ export async function fetchMetaAnalyticsDailyAgg(clientId: string, platform?: 'i
       return result as DailyTotalsRow[];
     }
     
-    // For YouTube, skip materialized view and go directly to fallback
-    if (platform === 'youtube') {
-      console.log('Skipping materialized view for YouTube, using fallback query directly');
+    // For YouTube or when date range is specified, skip materialized view and go directly to fallback
+    // This ensures we get complete data for the specified date range
+    if (platform === 'youtube' || (startDate && endDate)) {
+      console.log('Skipping materialized view for complete date range data, using fallback query directly');
       // Skip to fallback logic below
     } else {
       // Try materialized view first for other platforms
@@ -223,30 +225,75 @@ export async function fetchMetaAnalyticsDailyAgg(clientId: string, platform?: 'i
           }
         });
         
-        // Return the data directly from materialized view
-        const result = data.map(row => ({
-          day: row.date,
-          platform: row.platform,
-          total_views: row.total_views || 0,
-          total_reach: row.total_reach || 0,
-          total_profile_visits: row.total_profile_visits || 0,
-          total_posts: row.total_posts || 0,
-          total_accounts: row.total_accounts || 0,
-          active_accounts: row.active_accounts || 0,
-          account_usernames: row.account_usernames || '',
-          // TikTok-specific fields
-          total_tt_profile_views: row.total_tt_profile_views || 0,
-          total_likes: row.total_likes || 0,
-          total_shares: row.total_shares || 0,
-          total_comments: row.total_comments || 0,
-          total_tt_followers: row.total_tt_followers || 0,
-          // YouTube-specific fields
-          total_yt_subs_gained: row.total_yt_subs_gained || 0,
-          total_yt_subs_lost: row.total_yt_subs_lost || 0,
-        }));
-        
-        console.log('Materialized view result:', { count: result.length, sample: result[0] });
-        return result as DailyTotalsRow[];
+        // Check if materialized view data covers the full requested date range
+        if (startDate && endDate) {
+          const sortedData = data.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+          const firstDate = sortedData[0]?.date;
+          const lastDate = sortedData[sortedData.length - 1]?.date;
+          
+          console.log('Materialized view date coverage check:', {
+            requestedStart: startDate,
+            requestedEnd: endDate,
+            actualStart: firstDate,
+            actualEnd: lastDate,
+            hasFullCoverage: firstDate <= startDate && lastDate >= endDate
+          });
+          
+          // If materialized view doesn't have full coverage, use fallback
+          if (firstDate > startDate || lastDate < endDate) {
+            console.log('Materialized view has incomplete date coverage, using fallback');
+          } else {
+            // Return the data directly from materialized view
+            const result = data.map(row => ({
+              day: row.date,
+              platform: row.platform,
+              total_views: row.total_views || 0,
+              total_reach: row.total_reach || 0,
+              total_profile_visits: row.total_profile_visits || 0,
+              total_posts: row.total_posts || 0,
+              total_accounts: row.total_accounts || 0,
+              active_accounts: row.active_accounts || 0,
+              account_usernames: row.account_usernames || '',
+              // TikTok-specific fields
+              total_tt_profile_views: row.total_tt_profile_views || 0,
+              total_likes: row.total_likes || 0,
+              total_shares: row.total_shares || 0,
+              total_comments: row.total_comments || 0,
+              total_tt_followers: row.total_tt_followers || 0,
+              // YouTube-specific fields
+              total_yt_subs_gained: row.total_yt_subs_gained || 0,
+              total_yt_subs_lost: row.total_yt_subs_lost || 0,
+            }));
+            
+            console.log('Materialized view result:', { count: result.length, sample: result[0] });
+            return result as DailyTotalsRow[];
+          }
+        } else {
+          // Return the data directly from materialized view
+          const result = data.map(row => ({
+            day: row.date,
+            platform: row.platform,
+            total_views: row.total_views || 0,
+            total_reach: row.total_reach || 0,
+            total_profile_visits: row.total_profile_visits || 0,
+            total_posts: row.total_posts || 0,
+            total_accounts: row.total_accounts || 0,
+            active_accounts: row.active_accounts || 0,
+            account_usernames: row.account_usernames || '',
+            // TikTok-specific fields
+            total_tt_profile_views: row.total_tt_profile_views || 0,
+            total_likes: row.total_likes || 0,
+            total_shares: row.total_shares || 0,
+            total_comments: row.total_comments || 0,
+            total_tt_followers: row.total_tt_followers || 0,
+            // YouTube-specific fields
+            total_yt_subs_gained: row.total_yt_subs_gained || 0,
+            total_yt_subs_lost: row.total_yt_subs_lost || 0,
+          }));
+          
+          console.log('Materialized view result:', { count: result.length, sample: result[0] });
+          return result as DailyTotalsRow[];
+        }
       }
     }
     
@@ -271,7 +318,8 @@ export async function fetchMetaAnalyticsDailyAgg(clientId: string, platform?: 'i
         yt_subs_lost
       `)
       .eq('client_id', parseInt(clientId, 10))
-      .order('date', { ascending: true });
+      .order('date', { ascending: true })
+      .limit(5000); // Increase limit to handle large date ranges
     
     if (platform) {
       fallbackQuery = fallbackQuery.eq('platform', platform);
@@ -279,13 +327,34 @@ export async function fetchMetaAnalyticsDailyAgg(clientId: string, platform?: 'i
     
     const { data: fallbackData, error: fallbackError } = await fallbackQuery;
     
-    console.log('Fallback query result:', {
-      error: fallbackError,
-      count: fallbackData?.length || 0,
-      sample: fallbackData?.[0],
-      platform: platform,
-      clientId: clientId
-    });
+    // Log detailed date range information
+    if (fallbackData && fallbackData.length > 0) {
+      const sortedData = fallbackData.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      const firstDate = sortedData[0]?.date;
+      const lastDate = sortedData[sortedData.length - 1]?.date;
+      
+      console.log('Fallback query result:', {
+        error: fallbackError,
+        count: fallbackData?.length || 0,
+        sample: fallbackData?.[0],
+        platform: platform,
+        clientId: clientId,
+        dateRange: {
+          firstDate: firstDate,
+          lastDate: lastDate,
+          requestedStart: startDate,
+          requestedEnd: endDate
+        }
+      });
+    } else {
+      console.log('Fallback query result:', {
+        error: fallbackError,
+        count: fallbackData?.length || 0,
+        sample: fallbackData?.[0],
+        platform: platform,
+        clientId: clientId
+      });
+    }
     
     // Special debugging for YouTube fallback
     if (platform === 'youtube') {

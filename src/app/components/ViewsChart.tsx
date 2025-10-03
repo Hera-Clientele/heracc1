@@ -50,25 +50,17 @@ interface ViewsChartProps {
 }
 
 export default function ViewsChart({ data, startDate, endDate }: ViewsChartProps) {
-  // Filter data by date range if provided and ensure no future dates
+  // Filter data by date range if provided
   let filteredData = data;
-  const currentDate = getCurrentTimeInAppTimezone().startOf('day');
   
   if (startDate && endDate) {
     filteredData = data.filter(row => {
       const rowDate = getDateInAppTimezone(row.day);
       const start = getDateInAppTimezone(startDate);
       const end = getDateInAppTimezone(endDate);
-      // Only show data within the selected range and not in the future
+      // Only show data within the selected range
       return rowDate.isAfter(start.subtract(1, 'day')) && 
-             rowDate.isBefore(end.add(1, 'day')) && 
-             rowDate.isBefore(currentDate.add(1, 'day'));
-    });
-  } else {
-    // Filter out future dates only
-    filteredData = data.filter(row => {
-      const rowDate = getDateInAppTimezone(row.day);
-      return rowDate.isBefore(currentDate.add(1, 'day'));
+             rowDate.isBefore(end.add(1, 'day'));
     });
   }
 
