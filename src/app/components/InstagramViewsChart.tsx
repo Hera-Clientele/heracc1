@@ -198,7 +198,7 @@ export default function InstagramViewsChart({ data, startDate, endDate, platform
             dataKey="date"
             tick={{ fontSize: 12, fill: '#9CA3AF' }}
             tickFormatter={(date) => dayjs(date).tz('America/New_York').format("MM/DD")}
-            interval={Math.max(1, Math.floor(combinedChartData.length / 10))}
+            interval="preserveStartEnd"
           />
           <YAxis 
             tick={{ fontSize: 12, fill: '#9CA3AF' }} 

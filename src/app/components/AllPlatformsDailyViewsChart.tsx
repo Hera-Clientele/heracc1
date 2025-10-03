@@ -185,7 +185,7 @@ export default function AllPlatformsDailyViewsChart({
             dataKey="date"
             tick={{ fontSize: 12 }}
             tickFormatter={(date) => dayjs(date).tz('America/New_York').format("MM/DD")}
-            interval={Math.max(1, Math.floor(dailyViewsData.length / 10))}
+            interval="preserveStartEnd"
           />
           <YAxis 
             tick={{ fontSize: 12 }} 
